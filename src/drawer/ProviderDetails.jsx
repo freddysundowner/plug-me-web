@@ -1,8 +1,6 @@
 import React, { useState, useContext } from "react";
 import {
-  FaStar,
   FaUserCircle,
-  FaRegStar,
   FaMapMarkerAlt,
   FaCircle,
   FaCalendar,
@@ -20,6 +18,7 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
   const [showBooking, setShowBooking] = useState(false);
   const { openDrawer } = useContext(DrawerContext);
   const { addMessage } = useContext(ChatContext); // Add this line to import addMessage from ChatContext
+  
 
   const handleBooking = (date, slot, service) => {
     const bookingMessage = {
@@ -29,13 +28,19 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
         service.label
       } at ${slot} on ${date.toDateString()}?`,
       timestamp: new Date().toLocaleTimeString(),
-      type: "booking",
+      type: "quote",
+      status: "pending",
     };
     addMessage(bookingMessage);
-    openDrawer("chatDrawer");
+    openDrawer("chatDrawer", provider);
   };
   return (
-    <Drawer title={provider.name} isOpen={isOpen} onClose={onClose}>
+    <Drawer
+      title={provider.name}
+      isOpen={isOpen}
+      onClose={onClose}
+      width="2xl:w-2/3 "
+    >
       <div className="flex flex-col mb-6">
         <div className="flex justify-evenly items-center py-4 border-b border-gray-200">
           {provider.image ? (

@@ -1,8 +1,6 @@
 import { useContext } from "react";
 import { FaCheck, FaTimesCircle } from "react-icons/fa";
-import GlobalContext from "../context/GlobalContext";
-const Message = ({ message, provider }) => {
-  const { openModal } = useContext(GlobalContext);
+const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
   return (
     <div
       className={`flex ${
@@ -25,7 +23,9 @@ const Message = ({ message, provider }) => {
         {message.type === "quote" && message.status === "pending" && (
           <div className="flex mt-2">
             <button
-              onClick={() => handleAcceptBooking(message.id)}
+              onClick={() => {
+                acceptOffer(message);
+              }}
               className="px-4 py-2 bg-green-500 text-white rounded-md mr-4"
             >
               <div className="flex gap-2 items-center">
@@ -35,8 +35,7 @@ const Message = ({ message, provider }) => {
             </button>
             <button
               onClick={() => {
-                openModal();
-                handleRejectBooking(message.id);
+                rejectOffer(message);
               }}
               className="px-4 py-2 bg-red-500 text-white rounded-md mr-4"
             >

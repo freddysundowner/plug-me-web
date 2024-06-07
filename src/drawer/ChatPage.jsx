@@ -11,8 +11,6 @@ import Drawer from "./Drawer"; // Import the reusable Drawer component
 import ChatContext from "../context/ChatContext"; // Import ChatContext
 import Quote from "../sharable/Quote";
 import Message from "../cards/Message";
-import Modal from "../sharable/Modal";
-import GlobalContext from "../context/GlobalContext";
 
 const ChatPage = ({ provider, isOpen, onClose, user }) => {
   const {
@@ -26,12 +24,15 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
     setDate,
     setDuration,
     handleRejectBooking,
-  } = useContext(ChatContext); // Use messages from ChatContext
-  const { showModal, closeModal } = useContext(GlobalContext);
+    handleAcceptBooking,
+  } = useContext(ChatContext);
   const [input, setInput] = useState("");
-  const [acceptedBookingId, setAcceptedBookingId] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
   const [showNewMessageBubble, setShowNewMessageBubble] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
+  const [type, setType] = useState("");
+  const [message, setMessage] = useState({});
+  const [openmodal, setOpenModal] = useState(false);
 
   const handleSendMessage = () => {
     if (input.trim()) {
@@ -45,26 +46,6 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
       setInput("");
     }
   };
-
-  const handleAcceptBooking = (id) => {
-    setAcceptedBookingId(id);
-  };
-
-  // const handleRejectBooking = (id) => {
-  //   let message = messages.filter((msg) => msg.id == id);
-  //   if (message) {
-  //     const rejectionMessage = {
-  //       id: Date.now(),
-  //       sender: "System",
-  //       text: `Booking rejected.`,
-  //       timestamp: new Date().toLocaleTimeString(),
-  //       type: "info",
-  //     };
-  //     addMessage(rejectionMessage);
-  //   }
-  //   console.log(message);
-  // };
-
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
@@ -95,6 +76,11 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
       setNewMessagesCount(messages.length - newMessagesCount);
     }
   }, [messages]);
+  const showModal = (message, type) => {
+    setOpenModal(true);
+    setMessage(message);
+    setType(type);
+  };
 
   return (
     <Drawer
@@ -129,7 +115,13 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
         >
           <div className="mb-4">
             {messages.map((message) => (
-              <Message message={message} provider={provider} key={message.id} />
+              <Message
+                message={message}
+                provider={provider}
+                key={message.id}
+                rejectOffer={(message) => showModal(message, "reject")}
+                acceptOffer={(message) => showModal(message, "accept")}
+              />
             ))}
             <div ref={messagesEndRef} />
           </div>
@@ -171,24 +163,75 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
       </div>
 
       {showQuotePopup && <Quote provider={provider} />}
-      {showModal && (
-        <Modal onClose={closeModal}>
-          {" "}
+      <AcceptRejectOffer
+        isOpen={openmodal}
+        type={type}
+        message={message}
+        setOpenModal={setOpenModal}
+      />
+    </Drawer>
+  );
+};
+
+export default ChatPage;
+const AcceptRejectOffer = ({ type, message, isOpen, setOpenModal }) => {
+  if (isOpen === false) return null;
+  const [rejectReason, setRejectReason] = useState("");
+  const { handleRejectBooking } = useContext(ChatContext);
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      <div className="bg-white p-4 rounded-md shadow-md w-2/3 mx-10">
+        <div className="flex justify-between items-center ">
+          <h3 className="text-lg font-semibold mb-4">
+            {type === "accept" ? "" : "Reject Offer"}
+          </h3>
+          <button onClick={() => setOpenModal(false)} className="text-red-500">
+            Close
+          </button>
+        </div>
+        {type === "reject" && (
           <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
             className="flex-1 p-2 border rounded-md w-full mt-4"
-            placeholder="Why do you want to reject"
+            placeholder="message"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 handleSendMessage();
               }
             }}
           />
-        </Modal>
-      )}
-    </Drawer>
+        )}
+        {type === "accept" && (
+          <p className="text-gray-500 mt-4">
+            Are you sure you want to accept this offer?
+          </p>
+        )}
+        <div className="flex justify-end mt-4">
+          <div className="flex">
+            {/* <button
+              onClick={() => {
+                setOpenModal(false);
+              }}
+              className="px-4 py-2 bg-red-500 text-white rounded-md"
+            >
+              Cancel
+            </button> */}
+            <button
+              onClick={() => {
+                setOpenModal(false);
+                if (type === "accept") {
+                } else {
+                  handleRejectBooking(message.id, rejectReason);
+                }
+              }}
+              className="px-4 py-2 bg-green-500 text-white rounded-md"
+            >
+              {type === "accept" ? "Yes" : "Submit"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
-
-export default ChatPage;

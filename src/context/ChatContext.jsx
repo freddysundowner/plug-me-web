@@ -64,13 +64,40 @@ export const ChatProvider = ({ children }) => {
       });
     }
   };
-  const handleRejectBooking = (id) => {
+  const handleAcceptBooking = (id) => {
+    let message = messages.filter((msg) => msg.id == id);
+    if (message) {
+      const acceptanceMessage = {
+        id: Date.now(),
+        sender: "System",
+        text: `Booking accepted.`,
+        timestamp: new Date().toLocaleTimeString(),
+        type: "info",
+      };
+      addMessage(acceptanceMessage);
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === id ? { ...msg, status: "accepted" } : msg
+        )
+      );
+    }
+    console.log(message);
+  };
+  const handleRejectBooking = (id,reason) => {
+    if(reason.trim() == ""){
+      setShowAlert({
+        show: true,
+        message: "Please enter a reason for rejection",
+        error: true,
+      });
+      return;
+    }
     let message = messages.filter((msg) => msg.id == id);
     if (message) {
       const rejectionMessage = {
         id: Date.now(),
         sender: "System",
-        text: `Booking rejected.`,
+        text: `Booking rejected.\n Reason: ${reason}`,
         timestamp: new Date().toLocaleTimeString(),
         type: "info",
       };
@@ -168,6 +195,7 @@ export const ChatProvider = ({ children }) => {
         showAlert,
         setShowAlert,
         handleRejectBooking,
+        handleAcceptBooking,
       }}
     >
       {children}
