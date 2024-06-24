@@ -1,19 +1,33 @@
-import React from "react";
+import React, { useState } from "react";
 import Drawer from "./Drawer";
+import TaskBoard from "./TaskBoard";
+import Transactions from "../components/myaccount/Transactions";
+import { FiUser, FiList } from "react-icons/fi";
+const MyAccount = ({ isOpen = false, onClose = () => {} }) => {
+  const [currentSection, setCurrentSection] = useState("account");
 
-const MyAccount = ({ isOpen, onClose }) => {
+  const renderSection = () => {
+    switch (currentSection) {
+      case "Tasks":
+        return <TaskBoard />;
+      // Add more cases for other sections here if needed
+      case "account":
+        return <Transactions />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <Drawer
       title="My Account"
       isOpen={isOpen}
       onClose={onClose}
-      subText="Manage your account settings"
+      subText="Manage your tasks"
+      width="w-2/3"
     >
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Account Details</h3>
-        <p>Email: user@example.com</p>
-        <p>Username: user123</p>
-        {/* Add more account details here */}
+      <div className="flex">
+        <div className="w-full p-4">{renderSection()}</div>
       </div>
     </Drawer>
   );

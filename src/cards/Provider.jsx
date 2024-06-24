@@ -15,43 +15,34 @@ const Provider = ({ provider }) => {
   const { drawerState, openDrawer, closeDrawer } = useContext(DrawerContext);
 
   const handleRatingsClick = () => {
+    console.log("handleRatingsClick", provider);
     openDrawer("providerDrawer", provider);
   };
 
   return (
     <div
-      className="p-4 bg-white rounded-lg shadow-md w-80 lg:w-full sm:w-full "
+      className="bg-white rounded-lg shadow-md lg:w-full sm:w-full pb-2"
       onClick={handleRatingsClick}
     >
-      <div className="relative">
-        {provider.image ? (
-          <img
-            src={provider.image}
-            alt={provider.name}
-            className="w-full h-32 object-cover rounded-t-lg"
-          />
-        ) : (
-          <div className="w-full h-32 flex items-center justify-center bg-gray-200 rounded-t-lg">
-            <FaUserCircle className="text-gray-400 text-5xl" />
+      <div className="w-full flex flex-col items-center justify-center bg-gray-200 rounded-t-lg pb-2">
+        <div className="flex flex-row justify-between w-full">
+          <div className=" bg-primary text-white px-2 py-1 rounded-tr-md rounded-bl-md">
+            <p className="text-xs">{provider.skill}</p>
           </div>
-        )}
-        <div className="absolute top-2 left-2 bg-primary text-white px-2 py-1 rounded-tr-md rounded-bl-md">
-          <p className="text-xs font-semibold">{provider.skill}</p>
+          <div className=" bg-white text-blue-600 px-2 py-1 rounded-tl-md rounded-br-md">
+            <p className="text-xs">
+              {provider.pricePerHour
+                ? `$${provider.pricePerHour}/hr`
+                : `${provider.fixedPrice}`}
+            </p>
+          </div>
         </div>
-        <div className="absolute top-2 right-2 bg-white text-blue-600 px-2 py-1 rounded-tl-md rounded-br-md">
-          <p className="text-xs font-semibold">
-            $
-            {provider.pricePerHour
-              ? `$${provider.pricePerHour}/hr`
-              : `${provider.fixedPrice}`}
-          </p>
+        <FaUserCircle className="text-gray-400 text-5xl" />
+
+        <div className="py-1 rounded-tl-md rounded-br-md">
+          <p className="text-sm ">{provider.distance} miles away</p>
         </div>
-        <div className="absolute bottom-2 left-2 py-1 rounded-tl-md rounded-br-md">
-          <p className="text-xs font-semibold">
-            {provider.distance} miles away
-          </p>
-        </div>
-        <div className="flex items-center absolute bottom-2 right-2 cursor-pointer">
+        <div className="flex items-center  cursor-pointer">
           {Array.from({ length: 5 }).map((_, index) =>
             index < provider.rating ? (
               <FaStar key={index} className="text-yellow-500" />
@@ -64,13 +55,13 @@ const Provider = ({ provider }) => {
           </span>
         </div>
       </div>
-      <div className="py-4">
-        <h2 className="text-md font-semibold text-center">{provider.name}</h2>
+      <h2 className="text-md font-semibold text-center">{provider.name}</h2>
+      {/* <div className="">
         <div className="flex justify-center mt-4">
-          <button className="mr-2 px-4 py-2 bg-primary text-white rounded-md shadow-md">
+          <button className="mr-2 px-4 py-2 bg-primary text-white rounded-md shadow-md text-sm">
             Hire
           </button>
-          <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md shadow-md">
+          <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md shadow-md text-sm">
             Message
           </button>
         </div>
@@ -103,7 +94,7 @@ const Provider = ({ provider }) => {
             <FaEnvelope className="text-gray-500 text-xl" />
           </a>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

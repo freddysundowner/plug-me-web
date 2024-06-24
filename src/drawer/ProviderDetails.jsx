@@ -16,9 +16,8 @@ import Rating from "../sharable/Rating";
 const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
   if (!isOpen) return null;
   const [showBooking, setShowBooking] = useState(false);
-  const { openDrawer } = useContext(DrawerContext);
+  const { openDrawer, closeDrawer } = useContext(DrawerContext);
   const { addMessage } = useContext(ChatContext); // Add this line to import addMessage from ChatContext
-  
 
   const handleBooking = (date, slot, service) => {
     const bookingMessage = {
@@ -33,6 +32,7 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
     };
     addMessage(bookingMessage);
     openDrawer("chatDrawer", provider);
+    closeDrawer("providerDrawer");
   };
   return (
     <Drawer
@@ -41,7 +41,7 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
       onClose={onClose}
       width="2xl:w-2/3 "
     >
-      <div className="flex flex-col mb-6">
+      <div className="flex flex-col mb-16">
         <div className="flex justify-evenly items-center py-4 border-b border-gray-200">
           {provider.image ? (
             <div>
@@ -98,6 +98,7 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
           <button
             onClick={() => {
               openDrawer("chatDrawer", provider);
+              closeDrawer("providerDrawer");
             }}
             className="w-1/2 px-6 py-2 bg-gray-200 text-gray-700 rounded-md shadow-md"
           >

@@ -13,16 +13,12 @@ const FeaturedProviders = ({ providers }) => {
     slidesToScroll: 1,
   };
   return (
-    <div className="overflow-x-auto whitespace-nowrap">
-      <div className="inline-flex">
-        {/* <Slider {...settings}> */}
-        {providers?.map((provider) => (
-          <div key={provider.id} className="mx-4 md:w-[300px]">
-            <ProviderCard provider={provider} />
-          </div>
-        ))}
-        {/* </Slider> */}
-      </div>
+    <div className="grid grid-cols-2 gap-4 m-2">
+      {providers?.map((provider, i) => (
+        <div key={i} className="md:w-full">
+          <ProviderCard provider={provider} />
+        </div>
+      ))}
     </div>
   );
 };

@@ -8,16 +8,20 @@ export const DrawerProvider = ({ children }) => {
     searchDrawer: { isOpen: false, selectedProvider: null },
     providerDrawer: { isOpen: false, selectedProvider: null },
     chatDrawer: { isOpen: false, selectedProvider: null },
+    loginDrawer: { isOpen: false, selectedProvider: null, type: "login" },
     inboxDrawer: { isOpen: false, selectedProvider: null, messages: [] },
+    becomeProvider: { isOpen: false, selectedProvider: null },
   });
 
-
-  const openDrawer = useCallback((drawer, provider = null, messages = []) => {
-    setDrawerState((prevState) => ({
-      ...prevState,
-      [drawer]: { isOpen: true, selectedProvider: provider, messages },
-    }));
-  }, []);
+  const openDrawer = useCallback(
+    (drawer, provider = null, messages = [], type = "login") => {
+      setDrawerState((prevState) => ({
+        ...prevState,
+        [drawer]: { isOpen: true, selectedProvider: provider, messages, type },
+      }));
+    },
+    []
+  );
 
   const closeDrawer = useCallback((drawer) => {
     setDrawerState((prevState) => ({

@@ -4,7 +4,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+body {
+  font-family: "Hero", sans-serif;
+  overflow: hidden;
+}
 
+.scrollable-featured-providers {
+  max-height: calc(100vh - 4rem); /* Adjust based on your layout */
+  overflow-y: auto;
+}
 /* Custom styles for the search bar */
 .search-bar {
   position: relative;
@@ -53,4 +61,27 @@
   z-index: 40;
   display: flex;
   justify-end: right;
+}
+@font-face {
+  font-family: "Hero";
+  src: url("/fonts/Hero-Bold.otf") format("opentype"),
+    url("/fonts/Hero-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Hero";
+  src: url("/fonts/Hero-Regular.otf") format("opentype"),
+    url("/fonts/Hero-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Hero";
+  src: url("/fonts/Hero-Light.otf") format("opentype"),
+    url("/fonts/Hero-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
 }

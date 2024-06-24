@@ -2,11 +2,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: '#5e60b9',
+        primary: "#5e60b9",
         gradient: {
-          start: '#5e60b9',
-          end: '#4eb5b5',
+          start: "#5e60b9",
+          end: "#4eb5b5",
         },
+      },
+      fontFamily: {
+        hero: ["Hero", "sans-serif"],
       },
     },
     screens: {

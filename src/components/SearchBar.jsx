@@ -2,6 +2,8 @@ import React, { useState, useContext } from "react";
 import { FaTimes, FaFilter } from "react-icons/fa";
 import DrawerContext from "../context/DrawerContext";
 import Slider from "rc-slider";
+import { AiOutlineSearch } from "react-icons/ai";
+import { FiNavigation, FiSliders, FiEdit3 } from "react-icons/fi";
 
 import "rc-slider/assets/index.css";
 
@@ -80,6 +82,29 @@ const SearchBar = ({ onResultsClick, skills, providers }) => {
     setIsFilterOpen(!isFilterOpen);
   };
 
+  return (
+    <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-10 flex items-center space-x-2">
+      <div className="flex items-center bg-white p-2 rounded-full shadow-lg">
+        <button className="p-2">
+          <AiOutlineSearch className="text-xl" />
+        </button>
+        <input
+          type="text"
+          placeholder="Search by address or MLS®#"
+          className="px-4 py-2 w-96 rounded-full focus:outline-none"
+        />
+      </div>
+      <button className="p-3 bg-white rounded-full shadow-lg">
+        <FiNavigation className="text-2xl" />
+      </button>
+      <button className="p-3 bg-white rounded-full shadow-lg">
+        <FiSliders className="text-2xl" />
+      </button>
+      <button className="p-3 bg-white rounded-full shadow-lg">
+        <FiEdit3 className="text-2xl" />
+      </button>
+    </div>
+  );
   return (
     <div className="w-full flex flex-col items-center relative">
       <div className="w-1/2 flex items-center border rounded p-2 ">

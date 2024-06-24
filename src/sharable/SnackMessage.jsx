@@ -16,12 +16,13 @@ const SnackMessage = ({ message, duration = 3000, onClose }) => {
       return () => clearTimeout(timer);
     }
   }, [message, duration, onClose, setShowAlert]);
+  console.log("error ", showAlert.error);
 
   return (
     showAlert.show && (
       <div
         className={`fixed top-4 right-4 z-50 p-4 ${
-          showAlert.error ? "bg-red-500" : "bg-green-500"
+          showAlert.error === true ? "bg-red-500" : "bg-green-500"
         } text-white rounded-lg shadow-lg transform transition-transform ${
           showAlert.show ? "translate-y-0" : "-translate-y-full"
         }`}

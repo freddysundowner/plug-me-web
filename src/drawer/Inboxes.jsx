@@ -4,7 +4,6 @@ import { FaEnvelope } from "react-icons/fa";
 import Drawer from "./Drawer";
 import { timeAgo } from "../utils/timeAgo";
 import DrawerContext from "../context/DrawerContext"
-import SnackMessage from "../sharable/SnackMessage";
 
 const Inboxes = ({ isOpen, onClose, provider }) => {
   const { messages, markAsRead } = useContext(ChatContext);
