@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { FiMenu, FiUser, FiSettings, FiLogOut } from "react-icons/fi";
 import MyAccountDrawer from "../drawer/MyAccount";
 import ProfileDrawer from "../drawer/Profile";
@@ -9,6 +9,8 @@ import NotificationIcon from "../sharable/NotificationIcon";
 import DrawerContext from "../context/DrawerContext";
 import { useSelector } from "react-redux";
 import TaskBoard from "../drawer/TaskBoard";
+import { getMessagesFromFirestore } from "../services/firebaseService";
+import ChatContext from "../context/ChatContext";
 
 function Menu({ provider }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -19,9 +21,19 @@ function Menu({ provider }) {
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const { currentUser } = useAuth();
   const { openDrawer, closeDrawer } = useContext(DrawerContext);
+  const { setMessages } = useContext(ChatContext);
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
   );
+
+  useEffect(() => {
+    const unsubscribe = getMessagesFromFirestore(
+      currentUser,
+      setMessages
+    );
+    return () => unsubscribe();
+  }, [currentUser]);
+
   const handleBecomeProvider = async () => {
     openDrawer("becomeProvider", provider);
     setIsMenuOpen(false);
@@ -96,7 +108,6 @@ function Menu({ provider }) {
       <TaskBoard
         isOpen={taskBoardOpen}
         onClose={() => setIsTaskBoardOpen(false)}
-        
       />
       <ProfileDrawer
         isOpen={isProfileOpen}

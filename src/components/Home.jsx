@@ -6,7 +6,6 @@ import SearchBar from "./SearchBar";
 import FeaturedProviders from "./FeaturedProviders";
 import Menu from "./Menu";
 import SearchResults from "../drawer/SearchResults";
-import useDataLoader from "./DataLoader";
 import DrawerContext, { DrawerProvider } from "../context/DrawerContext";
 import ProviderDetails from "../drawer/ProviderDetails";
 import ChatPage from "../drawer/ChatPage";
@@ -15,17 +14,26 @@ import NotificationIcon from "../sharable/NotificationIcon";
 import Chats from "../drawer/Inboxes";
 import MessageFeed from "../components/MessageFeed";
 import SnackMessage from "../sharable/SnackMessage";
-import GlobalContext, { GlobalProvider } from "../context/GlobalContext";
+import { GlobalProvider } from "../context/GlobalContext";
 import Switch from "../sharable/Switch";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import LoginSignupDrawer from "../drawer/LoginSignupDrawer";
 const libraries = ["places"];
-import { setProvider, clearProvider } from "../redux/features/providerSlice";
+import {
+  setProvider,
+  clearProvider,
+  setProviders,
+} from "../redux/features/providerSlice";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../auth/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import ProviderFormDrawer from "../drawer/ProviderFormDrawer";
 import NavBar from "./navbar";
+import {
+  getMessagesFromFirestore,
+  getProviders,
+} from "../services/firebaseService";
+import { LoadingProvider } from "../context/LoadingContext";
 
 const containerStyle = {
   width: "100vw",
@@ -42,7 +50,16 @@ const useGeolocation = (defaultCenter, defaultZoom) => {
       if (user) {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
-          dispatch(setProvider({ ...userDoc.data(), id: user.uid })); // Save user data in Redux
+          dispatch(
+            setProvider({
+              ...userDoc.data(),
+              id: user.uid,
+              geopoint: {
+                latitude: user?.geopoint?.latitude,
+                longitude: user?.geopoint?.longitude,
+              },
+            })
+          ); // Save user data in Redux
         }
       } else {
         dispatch(clearProvider()); // Clear user data from Redux
@@ -75,22 +92,43 @@ const useGeolocation = (defaultCenter, defaultZoom) => {
 };
 
 const Home = () => {
+  const dispatch = useDispatch();
   const { drawerState, openDrawer, closeDrawer } = useContext(DrawerContext);
-  const { messages, addMessage, unreadCount, visiblePopupMessages, showAlert } =
-    useContext(ChatContext);
+  const {
+    messages,
+    addMessage,
+    unreadCount,
+    visiblePopupMessages,
+    showAlert,
+    setMessages,
+  } = useContext(ChatContext);
 
   const [feedMessages, setFeedMessages] = useState([]);
+  useEffect(() => {
+    getProviders().then((data) => {
+      const serializedData = data.map((provider) => ({
+        ...provider,
+        geopoint: {
+          latitude: provider.geopoint.latitude,
+          longitude: provider.geopoint.longitude,
+        },
+      }));
 
-  const {
-    data: providers,
-    loading: providersLoading,
-    error: providersError,
-  } = useDataLoader("/providers.json");
-  const {
-    data: skills,
-    loading: skillsLoading,
-    error: skillsError,
-  } = useDataLoader("/skills.json");
+      // Dispatch the action with serialized data
+      dispatch(setProviders(serializedData));
+      // dispatch(setProviders(data));
+    });
+  }, []);
+  // const {
+  //   data: providers,
+  //   loading: providersLoading,
+  //   error: providersError,
+  // } = useDataLoader();
+  // const {
+  //   data: skills,
+  //   loading: skillsLoading,
+  //   error: skillsError,
+  // } = useDataLoader("/skills.json");
 
   const { mapCenter, zoomLevel } = useGeolocation(
     { lat: -3.745, lng: -38.523 },
@@ -102,13 +140,13 @@ const Home = () => {
     addMessage(msg);
   };
 
-  if (providersLoading || skillsLoading) {
-    return <div>Loading...</div>;
-  }
+  // if (providersLoading || skillsLoading) {
+  //   return <div>Loading...</div>;
+  // }
 
-  if (providersError || skillsError) {
-    return <div>Error loading data.</div>;
-  }
+  // if (providersError || skillsError) {
+  //   return <div>Error loading data.</div>;
+  // }
 
   const handleResultsClick = (filteredProviders) => {
     openDrawer("searchDrawer", filteredProviders);
@@ -139,13 +177,13 @@ const Home = () => {
 
           {/* <Markers providers={providers} /> */}
           <SearchBar
-            skills={skills}
+            skills={[]}
             onResultsClick={handleResultsClick}
-            providers={providers}
+            providers={[]}
           />
         </GoogleMap>
         <div className="w-[45%] mt-24 scrollable-featured-providers">
-          <FeaturedProviders providers={providers} />
+          <FeaturedProviders />
         </div>
       </div>
       {drawerState.searchDrawer.isOpen && (
@@ -216,22 +254,6 @@ const MapOverlay = ({
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
   );
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    if (currentUser && currentProvider) {
-      setIsAvailable(currentProvider.online);
-    }
-  }, [currentUser, currentProvider]);
-
-  const handleAvailabilityChange = (checked) => {
-    setIsAvailable(checked);
-    if (currentUser) {
-      const userDocRef = doc(db, "users", currentUser.uid);
-      updateDoc(userDocRef, { online: checked });
-      dispatch(setProvider({ ...currentProvider, online: checked }));
-    }
-  };
 
   const handleBecomeProvider = async () => {
     openDrawer("becomeProvider", currentProvider);
@@ -307,15 +329,17 @@ const Markers = ({ providers }) => (
 
 const HomeWithProvider = () => (
   <AuthProvider>
-    <Provider store={store}>
-      <GlobalProvider>
-        <DrawerProvider>
-          <ChatProvider>
-            <Home />
-          </ChatProvider>
-        </DrawerProvider>
-      </GlobalProvider>
-    </Provider>
+    <LoadingProvider>
+      <Provider store={store}>
+        <GlobalProvider>
+          <DrawerProvider>
+            <ChatProvider>
+              <Home />
+            </ChatProvider>
+          </DrawerProvider>
+        </GlobalProvider>
+      </Provider>
+    </LoadingProvider>
   </AuthProvider>
 );
 

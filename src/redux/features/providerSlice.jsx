@@ -3,6 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   currentProvider: null,
+  providers: [],
 };
 
 const providerSlice = createSlice({
@@ -18,9 +19,12 @@ const providerSlice = createSlice({
     clearProvider: (state) => {
       state.currentProvider = null;
     },
+    setProviders: (state, action) => {
+      state.providers = action.payload;
+    },
   },
 });
 
-export const { updateProvider, setProvider, clearProvider } =
+export const { updateProvider, setProvider, clearProvider, setProviders } =
   providerSlice.actions;
 export default providerSlice.reducer;

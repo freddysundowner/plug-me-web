@@ -1,14 +1,18 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import ChatContext from "../context/ChatContext"; // Import ChatContext
 import { FaEnvelope } from "react-icons/fa";
 import Drawer from "./Drawer";
 import { timeAgo } from "../utils/timeAgo";
-import DrawerContext from "../context/DrawerContext"
+import DrawerContext from "../context/DrawerContext";
+import { useAuth } from "../context/AuthContext";
+import { getMessagesFromFirestore } from "../services/firebaseService";
 
 const Inboxes = ({ isOpen, onClose, provider }) => {
-  const { messages, markAsRead } = useContext(ChatContext);
+
+  const { messages, markAsRead, setMessages } = useContext(ChatContext);
   const { openDrawer, closeDrawer } = useContext(DrawerContext);
   const [selectedChat, setSelectedChat] = useState(null);
+
 
   const getLastMessage = (sender) => {
     return messages
@@ -28,10 +32,11 @@ const Inboxes = ({ isOpen, onClose, provider }) => {
         {senders.map((sender) => {
           const lastMessage = getLastMessage(sender);
           const unreadCount = getUnreadCount(sender);
+          console.log(lastMessage);
 
           return (
             <div
-              key={sender}
+              key={lastMessage?.timestamp}
               className="flex items-center p-2 border-b"
               onClick={() => {
                 setSelectedChat(sender);
@@ -42,8 +47,8 @@ const Inboxes = ({ isOpen, onClose, provider }) => {
               }}
             >
               <div className="flex-1">
-                <p className="font-bold">{sender}</p>
-                <p>{lastMessage.text}</p>
+                <p className="font-bold">{lastMessage?.sender?.name}</p>
+                <p>{lastMessage.message}</p>
                 <span className="text-xs text-gray-600">
                   {timeAgo(lastMessage.timestamp)}
                 </span>

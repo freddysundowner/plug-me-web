@@ -11,6 +11,7 @@ import Drawer from "./Drawer"; // Import the reusable Drawer component
 import ChatContext from "../context/ChatContext"; // Import ChatContext
 import Quote from "../sharable/Quote";
 import Message from "../cards/Message";
+import { useSelector } from "react-redux";
 
 const ChatPage = ({ provider, isOpen, onClose, user }) => {
   const {
@@ -33,14 +34,27 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
   const [type, setType] = useState("");
   const [message, setMessage] = useState({});
   const [openmodal, setOpenModal] = useState(false);
+  const currentProvider = useSelector(
+    (state) => state.provider.currentProvider
+  );
 
   const handleSendMessage = () => {
     if (input.trim()) {
       const newMessage = {
-        id: messages.length + 1,
-        sender: provider.name,
-        text: input,
-        timestamp: new Date().toLocaleTimeString(),
+        sender: {
+          id: currentProvider.id,
+          name: currentProvider.username,
+          photoURL: currentProvider?.photoURL ?? null,
+        },
+        receiver: {
+          id: provider.id,
+          name: provider.username,
+          photoURL: provider?.photoURL ?? null,
+        },
+        message: input,
+        timestamp: Date.now(),
+        users: [currentProvider.id, provider.id],
+        type: "message",
       };
       addMessage(newMessage);
       setInput("");
@@ -118,7 +132,7 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
               <Message
                 message={message}
                 provider={provider}
-                key={message.id}
+                key={message.timestamp}
                 rejectOffer={(message) => showModal(message, "reject")}
                 acceptOffer={(message) => showModal(message, "accept")}
               />

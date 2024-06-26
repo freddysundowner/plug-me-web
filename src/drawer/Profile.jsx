@@ -6,13 +6,13 @@ import PayoutMethods from "../components/profile/PayoutMethods";
 import ChangePassword from "../components/profile/ChangePassword";
 
 const Profile = ({ isOpen = false, onClose = () => {} }) => {
-  const [currentSection, setCurrentSection] = useState("Contact Info");
+  const [currentSection, setCurrentSection] = useState("Profile Info");
 
   const renderSection = () => {
     switch (currentSection) {
-      case "Contact Info":
+      case "Profile Info":
         return <ContactInfo />;
-      case "Profile Settings":
+      case "Provider Settings":
         return <ProfileSettings />;
       case "Payout Methods":
         return <PayoutMethods />;
@@ -36,19 +36,19 @@ const Profile = ({ isOpen = false, onClose = () => {} }) => {
           <ul className="list-none p-0">
             <li
               className={`p-2 cursor-pointer ${
-                currentSection === "Contact Info" ? "bg-green-100" : ""
+                currentSection === "Profile Info" ? "bg-green-100" : ""
               }`}
-              onClick={() => setCurrentSection("Contact Info")}
+              onClick={() => setCurrentSection("Profile Info")}
             >
-              Contact Info
+              Profile Info
             </li>
             <li
               className={`p-2 cursor-pointer ${
-                currentSection === "Profile Settings" ? "bg-green-100" : ""
+                currentSection === "Provider Settings" ? "bg-green-100" : ""
               }`}
-              onClick={() => setCurrentSection("Profile Settings")}
+              onClick={() => setCurrentSection("Provider Settings")}
             >
-              Profile Settings
+              Provider Settings
             </li>
             <li
               className={`p-2 cursor-pointer ${

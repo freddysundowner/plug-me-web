@@ -1,11 +1,17 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { FaTimes, FaFilter } from "react-icons/fa";
 import DrawerContext from "../context/DrawerContext";
 import Slider from "rc-slider";
 import { AiOutlineSearch } from "react-icons/ai";
 import { FiNavigation, FiSliders, FiEdit3 } from "react-icons/fi";
+import { setProvider, clearProvider } from "../redux/features/providerSlice";
 
 import "rc-slider/assets/index.css";
+import Switch from "../sharable/Switch";
+import { useDispatch } from "react-redux";
+import { useAuth } from "../context/AuthContext";
+import { useSelector } from "react-redux";
+import { updateProviderData } from "../services/firebaseService";
 
 const SearchBar = ({ onResultsClick, skills, providers }) => {
   const [query, setQuery] = useState("");
@@ -14,6 +20,12 @@ const SearchBar = ({ onResultsClick, skills, providers }) => {
   const [priceRange, setPriceRange] = useState([0, 50]);
   const [distanceRange, setDistanceRange] = useState(100);
   const [service, setService] = useState("");
+  const dispatch = useDispatch();
+  const { currentUser } = useAuth();
+  const [isAvailable, setIsAvailable] = useState(false);
+  const currentProvider = useSelector(
+    (state) => state.provider.currentProvider
+  );
 
   const { openDrawer } = useContext(DrawerContext);
 
@@ -82,6 +94,26 @@ const SearchBar = ({ onResultsClick, skills, providers }) => {
     setIsFilterOpen(!isFilterOpen);
   };
 
+  useEffect(() => {
+    if (currentUser && currentProvider) {
+      setIsAvailable(currentProvider.online);
+    }
+  }, [currentUser, currentProvider]);
+
+  const handleAvailabilityChange = async (checked) => {
+    setIsAvailable(checked?.target?.checked);
+    console.log(currentProvider?.id);
+    if (currentProvider) {
+      // const userDocRef = doc(db, "users", currentUser.uid);
+      // updateDoc(userDocRef, { online: checked });
+      await updateProviderData(currentProvider.id, {
+        online: checked?.target?.checked,
+      });
+      // dispatch(
+      //   setProvider({ ...currentProvider, online: checked?.target?.checked })
+      // );
+    }
+  };
   return (
     <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-10 flex items-center space-x-2">
       <div className="flex items-center bg-white p-2 rounded-full shadow-lg">
@@ -103,6 +135,9 @@ const SearchBar = ({ onResultsClick, skills, providers }) => {
       <button className="p-3 bg-white rounded-full shadow-lg">
         <FiEdit3 className="text-2xl" />
       </button>
+      {currentProvider && currentProvider?.isProvider && (
+        <Switch checked={isAvailable} onChange={handleAvailabilityChange} />
+      )}
     </div>
   );
   return (

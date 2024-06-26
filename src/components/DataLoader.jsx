@@ -8,8 +8,9 @@ const useDataLoader = (url) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(url); // Fetch the JSON file
+        const response = await getProviders(); // Fetch the JSON file
         const jsonData = await response.json(); // Parse the JSON data
+        console.log(jsonData);
         setData(jsonData);
         setLoading(false);
       } catch (error) {

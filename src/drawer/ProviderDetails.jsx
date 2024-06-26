@@ -4,6 +4,9 @@ import {
   FaMapMarkerAlt,
   FaCircle,
   FaCalendar,
+  FaRegStar,
+  FaStar,
+  FaRocketchat,
 } from "react-icons/fa";
 import AvailabilityCalendar from "../components/AvailabilityCalendar";
 import Drawer from "./Drawer";
@@ -17,29 +20,14 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
   if (!isOpen) return null;
   const [showBooking, setShowBooking] = useState(false);
   const { openDrawer, closeDrawer } = useContext(DrawerContext);
-  const { addMessage } = useContext(ChatContext); // Add this line to import addMessage from ChatContext
 
-  const handleBooking = (date, slot, service) => {
-    const bookingMessage = {
-      id: Date.now(),
-      sender: "System",
-      text: `Can I book you for ${
-        service.label
-      } at ${slot} on ${date.toDateString()}?`,
-      timestamp: new Date().toLocaleTimeString(),
-      type: "quote",
-      status: "pending",
-    };
-    addMessage(bookingMessage);
-    openDrawer("chatDrawer", provider);
-    closeDrawer("providerDrawer");
-  };
   return (
     <Drawer
       title={provider.name}
       isOpen={isOpen}
       onClose={onClose}
       width="2xl:w-2/3 "
+      showheader={false}
     >
       <div className="flex flex-col mb-16">
         <div className="flex justify-evenly items-center py-4 border-b border-gray-200">
@@ -55,55 +43,36 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
           ) : (
             <div className="flex items-center justify-center rounded-t-lg flex-col">
               <FaUserCircle className="text-gray-400 text-5xl" size={80} />
-              <Rating rating={provider.rating} />
+              <div className="flex items-center  cursor-pointer">
+                {Array.from({ length: 5 }).map((_, index) =>
+                  index < provider.rating ? (
+                    <FaStar key={index} className="text-yellow-500" />
+                  ) : (
+                    <FaRegStar key={index} className="text-yellow-500" />
+                  )
+                )}
+                <span className="ml-2 text-gray-600 text-xs">
+                  ({provider.rating})
+                </span>
+              </div>
             </div>
           )}
           <div>
             <div>
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="flex items-center text-gray-600 mr-6">
-                    <FaMapMarkerAlt className="mr-2" />
-                    {provider.location}
-                  </div>
+              <div className="flex flex-col justify-between items-center">
+                <div className="flex items-center text-gray-600 mr-6">
+                  <FaMapMarkerAlt className="mr-2" />
+                  {provider.location}
                 </div>
-                <div></div>
+                <p className="text-sm">{provider.distance} miles away</p>
               </div>
 
-              <div className="flex pt-4">
-                <div className="px-6 py-2  rounded-md shadow-lg bg-gray-200 text-gray-700">
-                  {provider.pricePerHour && (
-                    <p className="text-gray-600">
-                      Charges: ${provider.pricePerHour}/hr
-                    </p>
-                  )}
-                  {provider.fixedPrice && (
-                    <p className="text-gray-600">
-                      Fixed price: ${provider.fixedPrice}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center px-6 py-2  ">
-                  <FaCircle className="mr-2 text-green-600" />
-                  Available now
-                </div>
+              <div className="flex pt-4 items-center">
+                <FaCircle className="mr-2 text-green-600" />
+                Available now
               </div>
             </div>
           </div>
-        </div>
-        <div className="flex justify-between p-4 ">
-          <button className="w-1/2 px-6 py-2 mr-4 bg-primary text-white rounded-md shadow-md">
-            Hire
-          </button>
-          <button
-            onClick={() => {
-              openDrawer("chatDrawer", provider);
-              closeDrawer("providerDrawer");
-            }}
-            className="w-1/2 px-6 py-2 bg-gray-200 text-gray-700 rounded-md shadow-md"
-          >
-            Message
-          </button>
         </div>
         <div className="p-4">
           <div className="mb-4">
@@ -111,59 +80,83 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
             <p className="text-gray-600">{provider.description}</p>
           </div>
           <div className="mb-4">
-            <h3 className="text-lg font-semibold">Services Offered</h3>
+            <h3 className="text-lg font-semibold">My skills</h3>
             <ul className="flex flex-wrap gap-2">
               {provider.services.map((service, index) => (
                 <li
                   key={index}
                   className="px-3 py-1 bg-white text-black border border-primary rounded-full text-sm font-semibold"
                 >
-                  {service.value}
+                  {service.label}
                 </li>
               ))}
             </ul>
           </div>
-          <div className="mb-4"></div>
-          <button
-            onClick={() => {
-              setShowBooking(!showBooking);
-            }}
-            className="w-full px-6 py-2 bg-primary text-white rounded-md shadow-md items-center flex justify-center"
-          >
-            <FaCalendar className="mr-2" />
-            <p>Book my services</p>
-          </button>
+          <div className="mb-4 flex gap-4">
+            <button
+              onClick={() => {
+                setShowBooking(!showBooking);
+              }}
+              className="w-full px-6 py-2 bg-primary text-white rounded-md shadow-md items-center flex justify-center"
+            >
+              <FaCalendar className="mr-2" />
+              <p>Request a Quote</p>
+            </button>
+
+            <button
+              onClick={() => {
+                openDrawer("chatDrawer", provider);
+                closeDrawer("providerDrawer");
+              }}
+              className="w-1/2 px-6 py-2 bg-gray-200 text-gray-700 rounded-md shadow-md"
+            >
+              <div className="flex items-center gap-4 justify-center">
+                <FaRocketchat />
+                <p>Message Me</p>
+              </div>
+            </button>
+          </div>
 
           {showBooking && (
             <AvailabilityCalendar
               provider={provider}
-              onBook={handleBooking}
               primaryColor="#5e60b9"
             />
           )}
-          {/* 
+
           <div className="mb-4">
             <h3 className="text-lg font-semibold">Reviews</h3>
-            {provider.reviews.map((review, index) => (
-              <div key={index} className="mb-2">
-                <div className="flex justify-center items-center">
-                  {Array.from({ length: 5 }).map((_, i) =>
-                    i < review.rating ? (
-                      <FaStar key={i} className="text-yellow-500" />
-                    ) : (
-                      <FaRegStar key={i} className="text-yellow-500" />
-                    )
-                  )}
-                  <span className="ml-2 text-gray-600 text-xs">
-                    ({review.rating})
-                  </span>
+            {provider.reviews.length == 0 ? (
+              <p className="text-gray-600">No reviews available</p>
+            ) : (
+              provider.reviews.map((review, index) => (
+                <div key={index} className="mb-2">
+                  <div className="flex justify-center items-center">
+                    {Array.from({ length: 5 }).map((_, i) =>
+                      i < review.rating ? (
+                        <FaStar key={i} className="text-yellow-500" />
+                      ) : (
+                        <FaRegStar key={i} className="text-yellow-500" />
+                      )
+                    )}
+                    <span className="ml-2 text-gray-600 text-xs">
+                      ({review.rating})
+                    </span>
+                  </div>
+                  <p className="text-gray-600 text-sm">{review.comment}</p>
+                  <p className="text-gray-500 text-xs">- {review.author}</p>
                 </div>
-                <p className="text-gray-600 text-sm">{review.comment}</p>
-                <p className="text-gray-500 text-xs">- {review.author}</p>
-              </div>
-            ))}
-          </div> */}
-          <WorkHistory workHistory={provider.workHistory} />
+              ))
+            )}
+          </div>
+          {provider.workHistory.length == 0 ? (
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold">Work History</h3>
+              <p className="text-gray-600">No work history available</p>
+            </div>
+          ) : (
+            <WorkHistory workHistory={provider.workHistory} />
+          )}
           <Socialicons provider={provider} />
         </div>
       </div>

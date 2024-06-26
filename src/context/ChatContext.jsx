@@ -1,4 +1,11 @@
 import React, { createContext, useState, useEffect } from "react";
+import {
+  addMessageToFirestore,
+  getMessagesFromFirestore,
+  updateMessageInFirestore,
+} from "../services/firebaseService";
+import { useAuth } from "./AuthContext";
+import { useSelector } from "react-redux";
 
 const ChatContext = createContext();
 
@@ -16,27 +23,11 @@ export const ChatProvider = ({ children }) => {
   const [serviceName, setServiceName] = useState(null);
   const [date, setDate] = useState("");
   const [duration, setDuration] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      id: Date.now(),
-      sender: "System",
-      text: `Hello, please select a provider and make an appointment.`,
-      timestamp: Date.now(),
-      type: "message",
-      read: false,
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
 
-  const botMessages = [
-    "Welcome! How can I help you today?",
-    "Don't forget to check our latest updates.",
-    "If you have any questions, feel free to ask.",
-    "Thank you for using our service.",
-    "Have a great day!",
-  ];
-
-  const addMessage = (message) => {
-    setMessages((prevMessages) => [...prevMessages, message]);
+  const addMessage = async (message) => {
+    console.log(message);
+    await addMessageToFirestore(message);
   };
 
   const handleSendQuote = (provider) => {
@@ -52,6 +43,7 @@ export const ChatProvider = ({ children }) => {
         timestamp: new Date().toLocaleTimeString(),
         type: "quote",
         status: "pending",
+        service: serviceName, // Keep reference of the service
       };
       addMessage(newQuote);
       setQuotes([...quotes, newQuote]);
@@ -59,13 +51,15 @@ export const ChatProvider = ({ children }) => {
     } else {
       setShowAlert({
         show: true,
-        message: "All fields are require",
+        message: "All fields are required",
         error: true,
       });
     }
   };
-  const handleAcceptBooking = (id) => {
-    let message = messages.filter((msg) => msg.id == id);
+
+  // Inside handleAcceptBooking function
+  const handleAcceptBooking = async (id) => {
+    let message = messages.find((msg) => msg.id === id);
     if (message) {
       const acceptanceMessage = {
         id: Date.now(),
@@ -73,18 +67,20 @@ export const ChatProvider = ({ children }) => {
         text: `Booking accepted.`,
         timestamp: new Date().toLocaleTimeString(),
         type: "info",
+        service: message.service, // Keep reference of the service
       };
-      addMessage(acceptanceMessage);
+      await addMessage(acceptanceMessage);
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
           msg.id === id ? { ...msg, status: "accepted" } : msg
         )
       );
     }
-    console.log(message);
   };
-  const handleRejectBooking = (id,reason) => {
-    if(reason.trim() == ""){
+
+  // Inside handleRejectBooking function
+  const handleRejectBooking = async (id, reason) => {
+    if (reason.trim() === "") {
       setShowAlert({
         show: true,
         message: "Please enter a reason for rejection",
@@ -92,7 +88,7 @@ export const ChatProvider = ({ children }) => {
       });
       return;
     }
-    let message = messages.filter((msg) => msg.id == id);
+    let message = messages.find((msg) => msg.id === id);
     if (message) {
       const rejectionMessage = {
         id: Date.now(),
@@ -100,39 +96,25 @@ export const ChatProvider = ({ children }) => {
         text: `Booking rejected.\n Reason: ${reason}`,
         timestamp: new Date().toLocaleTimeString(),
         type: "info",
+        service: message.service, // Keep reference of the service
       };
-      addMessage(rejectionMessage);
+
+      await addMessage(rejectionMessage);
+      console.log(rejectionMessage);
+      console.log(id);
+      await updateMessageInFirestore(id, { status: "rejected" });
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
           msg.id === id ? { ...msg, status: "rejected" } : msg
         )
       );
     }
-    console.log(message);
   };
-
-  // useEffect(() => {
-  //   const botInterval = setInterval(() => {
-  //     const randomMessage =
-  //       botMessages[Math.floor(Math.random() * botMessages.length)];
-  //     addMessage({
-  //       id: Date.now(),
-  //       sender: "Bot",
-  //       text: randomMessage,
-  //       timestamp: Date.now(),
-  //       type: "bot",
-  //       read: false,
-  //     });
-  //   }, 2000);
-
-  //   return () => clearInterval(botInterval);
-  // }, []);
 
   useEffect(() => {
     if (messages.length) {
       const newMessage = messages[messages.length - 1];
       if (!newMessage.read) {
-        // Check if the message is unread
         setVisiblePopupMessages((prevMessages) => {
           if (
             prevMessages.some(
@@ -167,17 +149,12 @@ export const ChatProvider = ({ children }) => {
     );
   };
 
-  const unreadCount = () => {
-    // Your unread count logic
-  };
-
   return (
     <ChatContext.Provider
       value={{
         messages,
         addMessage,
         markAsRead,
-        unreadCount,
         setVisiblePopupMessages,
         visiblePopupMessages,
         handleSendQuote,
@@ -196,6 +173,7 @@ export const ChatProvider = ({ children }) => {
         setShowAlert,
         handleRejectBooking,
         handleAcceptBooking,
+        setMessages,
       }}
     >
       {children}

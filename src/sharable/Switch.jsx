@@ -2,7 +2,7 @@ import React from "react";
 
 const Switch = ({ checked, onChange }) => {
   return (
-    <label className="flex items-center cursor-pointer bg-white shadow-sm rounded-full px-4">
+    <label className="flex items-center cursor-pointer bg-white shadow-sm rounded-full p-4">
       <div className="relative">
         <input
           type="checkbox"
@@ -22,7 +22,7 @@ const Switch = ({ checked, onChange }) => {
         ></div>
       </div>
       <span className="ml-3 text-gray-700">
-        {checked ? "Available" : "Not Available"}
+        {checked ? "Online" : "Offline"}
       </span>
     </label>
   );

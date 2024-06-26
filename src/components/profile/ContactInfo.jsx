@@ -1,25 +1,48 @@
-import React,{useState} from "react";
+import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { updateProvider } from "../../redux/features/providerSlice";
+import { updateProviderData } from "../../services/firebaseService";
+import { useAuth } from "../../context/AuthContext";
 
 const ContactInfo = () => {
   const dispatch = useDispatch();
+  const [saving, setSaving] = useState(false);
+  const { currentUser } = useAuth();
+
   const provider = useSelector((state) => state.provider.currentProvider);
 
-  const [formData, setFormData] = useState(provider);
+  const [formData, setFormData] = useState({
+    ...provider,
+    email: currentUser?.email,
+  });
 
   const handleChange = (key, value) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    console.log(formData);
+    setSaving(true);
+    await updateProviderData(formData.id, formData);
     dispatch(updateProvider(formData));
+    setSaving(false);
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="mb-4">
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700">
+            Name
+          </label>
+          <input
+            type="text"
+            value={formData?.username}
+            onChange={(e) => handleChange("username", e.target.value)}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
+          />
+        </div>
         <label className="block text-sm font-medium text-gray-700">Email</label>
         <input
           type="email"
@@ -61,12 +84,21 @@ const ContactInfo = () => {
           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
         />
       </div>
-      <button
-        type="submit"
-        className="w-full py-2 px-4 bg-green-500 text-white rounded-md"
-      >
-        Save Changes
-      </button>
+      {saving ? (
+        <button
+          type="submit"
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md"
+        >
+          Saving...
+        </button>
+      ) : (
+        <button
+          type="submit"
+          className="w-full py-2 px-4 bg-green-500 text-white rounded-md"
+        >
+          Save Changes
+        </button>
+      )}
     </form>
   );
 };

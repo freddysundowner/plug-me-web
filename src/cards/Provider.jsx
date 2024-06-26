@@ -8,14 +8,15 @@ import {
   FaStar,
   FaRegStar,
   FaUserCircle,
+  FaCircle,
 } from "react-icons/fa";
-import DrawerContext, { DrawerProvider } from "../context/DrawerContext";
+import { MdVerified } from "react-icons/md";
+
+import DrawerContext from "../context/DrawerContext";
 
 const Provider = ({ provider }) => {
-  const { drawerState, openDrawer, closeDrawer } = useContext(DrawerContext);
-
+  const { openDrawer } = useContext(DrawerContext);
   const handleRatingsClick = () => {
-    console.log("handleRatingsClick", provider);
     openDrawer("providerDrawer", provider);
   };
 
@@ -25,20 +26,13 @@ const Provider = ({ provider }) => {
       onClick={handleRatingsClick}
     >
       <div className="w-full flex flex-col items-center justify-center bg-gray-200 rounded-t-lg pb-2">
-        <div className="flex flex-row justify-between w-full">
-          <div className=" bg-primary text-white px-2 py-1 rounded-tr-md rounded-bl-md">
-            <p className="text-xs">{provider.skill}</p>
-          </div>
-          <div className=" bg-white text-blue-600 px-2 py-1 rounded-tl-md rounded-br-md">
-            <p className="text-xs">
-              {provider.pricePerHour
-                ? `$${provider.pricePerHour}/hr`
-                : `${provider.fixedPrice}`}
-            </p>
+        <div className="flex flex-row justify-between w-full p-2 text-primary">
+          <MdVerified size={20} />
+          <div className="flex items-center">
+            <FaCircle className="mr-2 text-yellow-600" />
           </div>
         </div>
         <FaUserCircle className="text-gray-400 text-5xl" />
-
         <div className="py-1 rounded-tl-md rounded-br-md">
           <p className="text-sm ">{provider.distance} miles away</p>
         </div>
@@ -55,16 +49,29 @@ const Provider = ({ provider }) => {
           </span>
         </div>
       </div>
-      <h2 className="text-md font-semibold text-center">{provider.name}</h2>
-      {/* <div className="">
-        <div className="flex justify-center mt-4">
-          <button className="mr-2 px-4 py-2 bg-primary text-white rounded-md shadow-md text-sm">
+      <h2 className="text-md font-semibold text-center py-2">
+        {provider.username}
+      </h2>
+      <div className="overflow-x-auto whitespace-nowrap">
+        {provider.services.map((service, index) => (
+          <div
+            key={index}
+            className="inline-block bg-primary text-white px-2 py-1 rounded-tr-md rounded-bl-md mx-1"
+          >
+            <p className="text-xs">{service.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="">
+        {/* <div className="flex justify-center mt-4"> */}
+        {/* <button className="mr-2 px-10 py-2 bg-primary text-white rounded-md shadow-md text-sm">
             Hire
-          </button>
-          <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md shadow-md text-sm">
+          </button> */}
+        {/* <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md shadow-md text-sm">
             Message
-          </button>
-        </div>
+          </button> */}
+        {/* </div> */}
         <div className="flex justify-center mt-4">
           <a
             href={`https://wa.me/${provider.whatsapp}`}
@@ -94,7 +101,7 @@ const Provider = ({ provider }) => {
             <FaEnvelope className="text-gray-500 text-xl" />
           </a>
         </div>
-      </div> */}
+      </div>
     </div>
   );
 };

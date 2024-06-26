@@ -35,7 +35,6 @@ export const signUp = async (email, password, username) => {
       email,
       password
     );
-    console.log("email is", email);
     const user = userCredential.user;
     const userData = {
       email: user.email,

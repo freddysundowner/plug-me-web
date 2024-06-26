@@ -3,13 +3,16 @@ import { useSelector, useDispatch } from "react-redux";
 import { updateProvider } from "../../redux/features/providerSlice";
 import Select from "react-select";
 import GooglePlacesAutocomplete from "react-google-places-autocomplete";
-import Switch from "../../sharable/Switch";
 import { TimePicker } from "antd";
+import { GeoPoint } from "firebase/firestore";
 import moment from "moment";
 import {
   fetchServices,
   updateProviderAvailability,
+  updateProviderData,
 } from "../../services/firebaseService"; // Import the fetchServices function
+import Loading from "../../sharable/loading";
+import { getPlaceDetails } from "../../services/httpClient";
 
 const daysOptions = [
   { value: "Monday", label: "Monday" },
@@ -25,13 +28,13 @@ const daysOptions = [
 const ProfileSettings = () => {
   const dispatch = useDispatch();
   const provider = useSelector((state) => state.provider.currentProvider);
-  console.log(provider);
-
   const [formData, setFormData] = useState(provider);
   const [servicesOptions, setServicesOptions] = useState([]);
   const [currentAvailability, setCurrentAvailability] = useState(
     formData.services.map(() => ({ day: "", slots: [{ from: "", to: "" }] }))
   );
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const getServices = async () => {
@@ -48,9 +51,15 @@ const ProfileSettings = () => {
   const handleChange = (key, value) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
-
-  const handleLocationChange = (address) => {
-    handleChange("location", address.label);
+  const handleLocationChange = async (place) => {
+    if (place && place.value && place.value.place_id) {
+      const location = await getPlaceDetails(place.value.place_id);
+      handleChange("location", place?.label);
+      console.log(new GeoPoint(location.lat, location.lng));
+      handleChange("geopoint", new GeoPoint(location.lat, location.lng));
+    } else {
+      handleChange("location", { lat: null, lng: null });
+    }
   };
 
   const handleSkillsChange = (selectedOptions) => {
@@ -65,15 +74,24 @@ const ProfileSettings = () => {
     handleChange("services", updatedServices);
   };
 
+  const handleSaveChanges = async () => {
+    setSaving(true);
+    const userId = provider.id; // Assuming provider object has the user's id
+    console.log(userId, formData);
+    await updateProviderData(userId, formData);
+    setSaving(false);
+  };
+
   const handleSaveAvailability = async (serviceIndex) => {
+    setLoading(true);
     const newServices = JSON.parse(JSON.stringify(formData.services)); // Deep clone the services array
     newServices[serviceIndex].availability.push({
       ...currentAvailability[serviceIndex],
     });
 
     const userId = provider.id; // Assuming provider object has the user's id
-    console.log("newServices", provider.id, newServices);
     await updateProviderAvailability(userId, newServices);
+    setLoading(false);
 
     setFormData({ ...formData, services: newServices });
     setCurrentAvailability(
@@ -83,6 +101,18 @@ const ProfileSettings = () => {
           : availability
       )
     );
+  };
+
+  const handleAddTimeslot = (serviceIndex) => {
+    const newAvailability = [...currentAvailability];
+    newAvailability[serviceIndex].slots.push({ from: "", to: "" });
+    setCurrentAvailability(newAvailability);
+  };
+
+  const handleRemoveTimeslot = (serviceIndex, slotIndex) => {
+    const newAvailability = [...currentAvailability];
+    newAvailability[serviceIndex].slots.splice(slotIndex, 1);
+    setCurrentAvailability(newAvailability);
   };
 
   const handleRemoveAvailability = (serviceIndex, availIndex) => {
@@ -100,15 +130,6 @@ const ProfileSettings = () => {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700">Name</label>
-        <input
-          type="text"
-          value={formData.name}
-          onChange={(e) => handleChange("name", e.target.value)}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
-        />
-      </div>
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700">
           Skills
@@ -137,30 +158,13 @@ const ProfileSettings = () => {
         </label>
         <GooglePlacesAutocomplete
           selectProps={{
-            value: { label: formData.location, value: formData.location },
+            value: {
+              label: formData.location,
+              value: formData.location,
+            },
             onChange: handleLocationChange,
           }}
         />
-      </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700">Price</label>
-        <div className="flex items-center mt-1">
-          <input
-            type="number"
-            value={formData.pricePerHour}
-            onChange={(e) => handleChange("pricePerHour", e.target.value)}
-            className="block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3 mr-2"
-            placeholder="Price per hour"
-          />
-          <select
-            value={formData.priceType}
-            onChange={(e) => handleChange("priceType", e.target.value)}
-            className="block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3"
-          >
-            <option value="perHour">Per Hour</option>
-            <option value="fixed">Fixed Price</option>
-          </select>
-        </div>
       </div>
       <div className="mb-4">
         {formData.services.map((service, serviceIndex) => (
@@ -214,6 +218,13 @@ const ProfileSettings = () => {
                 )}
                 className="mt-1"
               />
+              <button
+                type="button"
+                className="bg-primary text-white px-4 py-2 rounded mt-2"
+                onClick={() => handleAddTimeslot(serviceIndex)}
+              >
+                Add Timeslot
+              </button>
               {currentAvailability[serviceIndex].day && (
                 <div className="mt-2">
                   {currentAvailability[serviceIndex].slots.map(
@@ -255,44 +266,61 @@ const ProfileSettings = () => {
                         <button
                           type="button"
                           className="bg-red-500 text-white px-2 py-1 rounded ml-2"
-                          onClick={() => {
-                            const newSlots = [
-                              ...currentAvailability[serviceIndex].slots,
-                            ];
-                            newSlots.splice(index, 1);
-                            const newAvailability = [...currentAvailability];
-                            newAvailability[serviceIndex].slots = newSlots;
-                            setCurrentAvailability(newAvailability);
-                          }}
+                          onClick={() =>
+                            handleRemoveTimeslot(serviceIndex, index)
+                          }
                         >
                           Remove
                         </button>
                       </div>
                     )
                   )}
-                  <button
-                    type="button"
-                    className="bg-primary text-white px-4 py-2 rounded mt-2"
-                    onClick={() => handleSaveAvailability(serviceIndex)}
-                    disabled={
-                      !currentAvailability[serviceIndex].slots[0]?.from ||
-                      !currentAvailability[serviceIndex].slots[0]?.to
-                    }
-                  >
-                    Save Availability
-                  </button>
+                  {loading ? (
+                    <div className="flex">
+                      <button
+                        type="button"
+                        className="bg-primary text-white px-4 py-2 rounded"
+                      >
+                        <Loading color="primary" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="bg-primary text-white px-4 py-2 rounded mt-2"
+                      onClick={() => handleSaveAvailability(serviceIndex)}
+                      disabled={
+                        !currentAvailability[serviceIndex].slots[0]?.from ||
+                        !currentAvailability[serviceIndex].slots[0]?.to
+                      }
+                    >
+                      Save Availability
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           </div>
         ))}
       </div>
-      <button
-        type="submit"
-        className="w-full py-2 px-4 bg-green-500 text-white rounded-md"
-      >
-        Save Changes
-      </button>
+      {saving ? (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            className="bg-green-500 text-white px-4 py-2 rounded"
+          >
+            <Loading color="white" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="submit"
+          onClick={handleSaveChanges}
+          className="w-full py-2 px-4 bg-green-500 text-white rounded-md"
+        >
+          Save Changes
+        </button>
+      )}
     </form>
   );
 };

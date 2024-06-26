@@ -1,10 +1,11 @@
 import { useContext } from "react";
 import { FaCheck, FaTimesCircle } from "react-icons/fa";
+import { timeAgo } from "../utils/timeAgo";
 const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
   return (
     <div
       className={`flex ${
-        message.sender === provider.name ? "justify-end" : "justify-start"
+        message.sender?.id === provider.id ? "justify-end" : "justify-start"
       }`}
     >
       <div
@@ -13,13 +14,15 @@ const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
             ? "bg-yellow-300 text-black"
             : message.type == "info"
             ? "bg-red-300"
-            : message.sender === provider.name
+            : message.sender?.id === provider.id
             ? "bg-blue-500 text-white"
             : "bg-gray-200 text-black"
         }`}
       >
-        <p>{message.text}</p>
-        <span className="text-xs text-gray-600">{message.timestamp}</span>
+        <p>{message.message}</p>
+        <span className="text-xs text-gray-600">
+          {timeAgo(message.timestamp)}
+        </span>
         {message.type === "quote" && message.status === "pending" && (
           <div className="flex mt-2">
             <button

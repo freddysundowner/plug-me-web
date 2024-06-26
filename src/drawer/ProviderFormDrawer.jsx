@@ -1,15 +1,26 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import Drawer from "./Drawer"; // Import the reusable Drawer component
 import { useDispatch } from "react-redux";
 import { doc, updateDoc, getDocs, collection } from "firebase/firestore";
 import { db, auth } from "../auth/firebaseConfig";
 import { setProvider } from "../redux/features/providerSlice";
 import Select from "react-select";
-import { Autocomplete } from "@react-google-maps/api";
+import { GeoPoint } from "firebase/firestore";
+import { Spin } from "antd";
+
+import GooglePlacesAutocomplete from "react-google-places-autocomplete";
 import { TimePicker } from "antd"; // Import TimePicker from Ant Design or any other library
 import moment from "moment"; // Import moment for handling time
+import { getPlaceDetails } from "../services/httpClient";
+import Loading from "../sharable/loading";
+import { useLoading } from "../context/LoadingContext";
+import { updateProviderData } from "../services/firebaseService";
+import ChatContext from "../context/ChatContext";
 
 const ProviderFormDrawer = ({ isOpen, onClose }) => {
+  const { loading, showLoading, hideLoading } = useLoading();
+  const { setShowAlert } = useContext(ChatContext); // Use ChatContext
+
   const dispatch = useDispatch();
   const [step, setStep] = useState(1);
   const [servicesOptions, setServicesOptions] = useState([]);
@@ -25,6 +36,10 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
     services: [],
     availability: { weekly: [], specificDates: [] },
     location: "",
+    reviews: [],
+    workHistory: [],
+    rating: 0,
+    distance: 0,
   });
   const [currentAvailability, setCurrentAvailability] = useState({});
 
@@ -42,10 +57,29 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
   };
 
   const handleChange = (e) => {
+    console.log(e.target);
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+  const handleLocationChange = async (place) => {
+    showLoading(true);
+    if (place && place.value && place.value.place_id) {
+      const location = await getPlaceDetails(place.value.place_id);
+      hideLoading(true);
+      // handleChange("location", place?.label);
+      setFormData((prev) => ({ ...prev, ["location"]: place?.label }));
+      console.log(new GeoPoint(location.lat, location.lng));
+      setFormData((prev) => ({
+        ...prev,
+        ["geopoint"]: new GeoPoint(location.lat, location.lng),
+      }));
+
+      // handleChange("geopoint", new GeoPoint(location.lat, location.lng));
+    } else {
+      // handleChange("location", { lat: null, lng: null });
+    }
   };
 
   const handleServicesChange = (selectedOptions) => {
@@ -88,6 +122,23 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
   };
 
   const handleNext = () => {
+    if (step === 2) {
+      for (let service of formData.services) {
+        if (
+          !service.price ||
+          !service.priceType ||
+          service.availability.length === 0
+        ) {
+          setShowAlert({
+            show: true,
+            error: true,
+            message:
+              "Please ensure each service has a price, price type, and at least one day of availability.",
+          });
+          return;
+        }
+      }
+    }
     setStep(step + 1);
   };
 
@@ -97,6 +148,7 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    showLoading(true);
     const user = auth.currentUser;
 
     if (user) {
@@ -129,9 +181,16 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
         }, []);
 
       try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, providerData);
+        // const userDocRef = doc(db, "users", user.uid);
+        // await updateDoc(userDocRef, providerData);
+        await updateProviderData(user.uid, providerData);
+        setShowAlert({
+          show: true,
+          error: false,
+          message: "Provider profile updated successfully",
+        });
         dispatch(setProvider(providerData));
+        hideLoading(true);
         onClose();
       } catch (error) {
         console.error("Error updating provider status:", error);
@@ -149,26 +208,24 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
         >
           Location
         </label>
-        <Autocomplete
-          onPlaceSelected={(place) =>
-            setFormData({
-              ...formData,
-              location: place.formatted_address,
-            })
-          }
-          types={["address"]}
-          componentRestrictions={{ country: "us" }}
-        >
-          <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            id="location"
-            name="location"
-            type="text"
-            value={formData.location}
-            onChange={handleChange}
-            required
-          />
-        </Autocomplete>
+        <GooglePlacesAutocomplete
+          selectProps={{
+            value: {
+              label: formData.location,
+              value: formData.location,
+            },
+            onChange: handleLocationChange,
+          }}
+          // onPlaceSelected={(place) => {
+          //   console.log("onPlaceSelected", place);
+          //   // setFormData({
+          //   //   ...formData,
+          //   //   location: place.formatted_address,
+          //   // });
+          //   handleChange("location", place.formatted_address);
+          // }}
+          // types={["address"]}
+        />
       </div>
       <div className="mb-4">
         <label
@@ -188,6 +245,20 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
       </div>
     </div>
   );
+
+  const handleAddTimeSlot = (serviceIndex) => {
+    const newSlots = [
+      ...currentAvailability[serviceIndex].slots,
+      { from: "", to: "" },
+    ];
+    setCurrentAvailability({
+      ...currentAvailability,
+      [serviceIndex]: {
+        ...currentAvailability[serviceIndex],
+        slots: newSlots,
+      },
+    });
+  };
 
   const renderAvailabilityForm = (service, index) => {
     const availableDays = [
@@ -323,6 +394,13 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
                   </option>
                 ))}
             </select>
+            <button
+              type="button"
+              className="bg-primary text-white px-4 py-2 rounded mt-2 mb-2"
+              onClick={() => handleAddTimeSlot(index)}
+            >
+              Add Time Slot
+            </button>
             {currentAvailability[index]?.day && (
               <>
                 {currentAvailability[index].slots.map((slot, slotIndex) => (
@@ -479,7 +557,6 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
         return null;
     }
   };
-
   return (
     <Drawer
       title="Become a Provider"
@@ -487,6 +564,11 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
       onClose={onClose}
       width="md:w-2/3"
     >
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-500 bg-opacity-50">
+          <Spin size="large" />
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="p-4 mb-20">
         {renderStep()}
         <div className="flex items-center justify-between mt-4">
@@ -507,6 +589,15 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
             >
               Next
             </button>
+          ) : loading ? (
+            <div className="flex">
+              <button
+                type="button"
+                className="bg-primary text-white px-4 py-2 rounded"
+              >
+                <Loading color="primary" />
+              </button>
+            </div>
           ) : (
             <button
               className="bg-primary hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
