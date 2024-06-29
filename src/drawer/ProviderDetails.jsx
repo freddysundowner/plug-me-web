@@ -23,10 +23,10 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
 
   return (
     <Drawer
-      title={provider.name}
+      title={provider.username}
       isOpen={isOpen}
       onClose={onClose}
-      width="2xl:w-2/3 "
+      width="2xl:w-2/3 xl:w-1/2 2xl:w-1/2 3xl:w-1/2 h-full lg:w-2/3 md:w-2/3 sm:w-full"
       showheader={false}
     >
       <div className="flex flex-col mb-16">
@@ -35,7 +35,7 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
             <div>
               <img
                 src={provider.image}
-                alt={provider.name}
+                alt={provider.username}
                 className="w-16 h-16 rounded-full object-cover shadow-lg mr-4"
               />
               <Rating rating={provider.rating} />

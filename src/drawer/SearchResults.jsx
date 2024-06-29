@@ -16,7 +16,6 @@ const SearchResults = ({
       onClose={onClose}
       width="w-full md:w-1/2 lg:w-1/2 xl:w-1/2 2xl:w-1/2 3xl:w-1/2 " // Adjust width for responsiveness
     >
-      {/* let there be 1 item on lg,and sm */}
       <div className="grid grid-cols-2  sm:grid-cols-1 gap-4 p-4 lg:grid-cols-2 md:grid-cols-1 2xl:grid-cols-2">
         {" "}
         {providers && providers.length > 0 ? (

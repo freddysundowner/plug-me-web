@@ -72,27 +72,43 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
   };
 
   const handleBooking = () => {
-    if (selectedSlot && selectedService && finalQuote) {
+    if (!currentProvider) {
+      closeDrawer("providerDrawer");
+      openDrawer("loginDrawer", provider);
+      return;
+    }
+    if (selectedSlot && selectedService) {
+      let message = `Hi ${provider.username}, I would like to book you for ${selectedService.label} at ${selectedSlot.from} - ${selectedSlot.to} on ${date.toDateString()}\n. Kindly send me the quote.`;
+      if (finalQuote) {
+        message = `Can I book you for ${selectedService.label} at ${selectedSlot.from
+          } - ${selectedSlot.to} on ${date.toDateString()} for $${finalQuote}?`
+      }
       const bookingMessage = {
         sender: {
           id: currentProvider.id,
-          name: currentProvider.username,
+          username: currentProvider.username,
           photoURL: currentProvider?.photoURL ?? null,
         },
         receiver: {
           id: provider.id,
-          name: provider.username,
+          username: provider.username,
           photoURL: provider?.photoURL ?? null,
         },
-        message: `Can I book you for ${selectedService.label} at ${
-          selectedSlot.from
-        } - ${selectedSlot.to} on ${date.toDateString()} for $${finalQuote}?`,
+        message,
         timestamp: Date.now(),
         users: [currentProvider.id, provider.id],
-        service: selectedService.value,
-        type: "quote",
+        service: {
+          id: selectedService.value,
+          value: selectedService.label,
+          price: selectedService.price,
+          priceType: selectedService.priceType,
+        }, 
+        type: "request",
         status: "pending",
         slot: selectedSlot,
+        provider: provider?.id,
+        quote: finalQuote ? finalQuote : 0,
+        date: date,
       };
       addMessage(bookingMessage);
       openDrawer("chatDrawer", provider);
@@ -231,11 +247,10 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
               <li
                 key={index}
                 onClick={() => handleSlotSelect(slot)}
-                className={`px-4 py-2 border rounded cursor-pointer ${
-                  selectedSlot === slot
-                    ? `bg-primary text-white`
-                    : `bg-white text-black border-primary`
-                }`}
+                className={`px-4 py-2 border rounded cursor-pointer ${selectedSlot === slot
+                  ? `bg-primary text-white`
+                  : `bg-white text-black border-primary`
+                  }`}
               >
                 {`${slot.from} - ${slot.to}`}
                 {selectedSlot === slot && (
@@ -254,24 +269,17 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
             className="text-lg font-semibold mb-2"
             style={{ color: primaryColor }}
           >
-            Quote: ${quote.toFixed(2)}
-          </h3>
-          <h3
-            className="text-lg font-semibold mb-2"
-            style={{ color: primaryColor }}
-          >
-            Counter Offers:
+            Select on Offer(Optional):
           </h3>
           <ul className="flex flex-wrap gap-2">
             {counterOffers.map((offer, index) => (
               <li
                 key={index}
                 onClick={() => handleCounterOfferSelect(offer)}
-                className={`px-4 py-2 border rounded cursor-pointer ${
-                  finalQuote === parseFloat(offer)
-                    ? `bg-primary text-white`
-                    : `bg-white text-black border-primary`
-                }`}
+                className={`px-4 py-2 border rounded cursor-pointer ${finalQuote === parseFloat(offer)
+                  ? `bg-primary text-white`
+                  : `bg-white text-black border-primary`
+                  }`}
               >
                 ${offer}
               </li>
@@ -281,9 +289,9 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
       )}
       <button
         onClick={handleBooking}
-        disabled={!selectedSlot || !selectedService || !finalQuote}
+        disabled={!selectedSlot || !selectedService}
         className="w-full px-4 py-2 bg-green-500 text-white rounded disabled:bg-gray-300"
-        // style={{ backgroundColor: primaryColor }}
+      // style={{ backgroundColor: primaryColor }}
       >
         Book Now
       </button>

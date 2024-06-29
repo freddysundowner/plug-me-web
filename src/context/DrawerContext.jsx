@@ -7,7 +7,7 @@ export const DrawerProvider = ({ children }) => {
   const [drawerState, setDrawerState] = useState({
     searchDrawer: { isOpen: false, selectedProvider: null },
     providerDrawer: { isOpen: false, selectedProvider: null },
-    chatDrawer: { isOpen: false, selectedProvider: null },
+    chatDrawer: { isOpen: false, selectedProvider: null, thread: null },
     loginDrawer: { isOpen: false, selectedProvider: null, type: "login" },
     inboxDrawer: { isOpen: false, selectedProvider: null, messages: [] },
     becomeProvider: { isOpen: false, selectedProvider: null },

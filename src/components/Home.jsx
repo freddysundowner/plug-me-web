@@ -30,7 +30,6 @@ import { onAuthStateChanged } from "firebase/auth";
 import ProviderFormDrawer from "../drawer/ProviderFormDrawer";
 import NavBar from "./navbar";
 import {
-  getMessagesFromFirestore,
   getProviders,
 } from "../services/firebaseService";
 import { LoadingProvider } from "../context/LoadingContext";
@@ -103,9 +102,12 @@ const Home = () => {
     setMessages,
   } = useContext(ChatContext);
 
+  const currentProvider = useSelector(
+    (state) => state.provider.currentProvider
+  );
   const [feedMessages, setFeedMessages] = useState([]);
   useEffect(() => {
-    getProviders().then((data) => {
+    getProviders(currentProvider).then((data) => {
       const serializedData = data.map((provider) => ({
         ...provider,
         geopoint: {
@@ -118,17 +120,7 @@ const Home = () => {
       dispatch(setProviders(serializedData));
       // dispatch(setProviders(data));
     });
-  }, []);
-  // const {
-  //   data: providers,
-  //   loading: providersLoading,
-  //   error: providersError,
-  // } = useDataLoader();
-  // const {
-  //   data: skills,
-  //   loading: skillsLoading,
-  //   error: skillsError,
-  // } = useDataLoader("/skills.json");
+  }, [currentProvider]);
 
   const { mapCenter, zoomLevel } = useGeolocation(
     { lat: -3.745, lng: -38.523 },
@@ -139,14 +131,6 @@ const Home = () => {
     setFeedMessages((prevMessages) => [...prevMessages, msg]);
     addMessage(msg);
   };
-
-  // if (providersLoading || skillsLoading) {
-  //   return <div>Loading...</div>;
-  // }
-
-  // if (providersError || skillsError) {
-  //   return <div>Error loading data.</div>;
-  // }
 
   const handleResultsClick = (filteredProviders) => {
     openDrawer("searchDrawer", filteredProviders);

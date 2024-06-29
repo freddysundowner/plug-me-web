@@ -6,7 +6,7 @@ const ActiveTasksPage = ({ provider, isOpen, onClose, activeTasks }) => {
 
   return (
     <Drawer
-      title={`Active Tasks for ${provider.name}`}
+      title={`Active Tasks for ${provider.username}`}
       isOpen={isOpen}
       onClose={onClose}
       width="w-full md:w-1/2 lg:w-1/2 xl:w-1/2 2xl:w-1/2 3xl:w-1/2 h-full"

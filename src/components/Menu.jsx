@@ -9,7 +9,7 @@ import NotificationIcon from "../sharable/NotificationIcon";
 import DrawerContext from "../context/DrawerContext";
 import { useSelector } from "react-redux";
 import TaskBoard from "../drawer/TaskBoard";
-import { getMessagesFromFirestore } from "../services/firebaseService";
+import { getInboxMessages } from "../services/firebaseService";
 import ChatContext from "../context/ChatContext";
 
 function Menu({ provider }) {
@@ -21,18 +21,11 @@ function Menu({ provider }) {
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const { currentUser } = useAuth();
   const { openDrawer, closeDrawer } = useContext(DrawerContext);
-  const { setMessages } = useContext(ChatContext);
+  const { setInbox } = useContext(ChatContext);
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
   );
 
-  useEffect(() => {
-    const unsubscribe = getMessagesFromFirestore(
-      currentUser,
-      setMessages
-    );
-    return () => unsubscribe();
-  }, [currentUser]);
 
   const handleBecomeProvider = async () => {
     openDrawer("becomeProvider", provider);

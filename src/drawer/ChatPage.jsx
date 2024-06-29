@@ -1,34 +1,25 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
 import {
-  FaTimes,
   FaPaperPlane,
-  FaCheck,
-  FaTimesCircle,
   FaTasks,
-  FaArrowDown,
 } from "react-icons/fa";
 import Drawer from "./Drawer"; // Import the reusable Drawer component
 import ChatContext from "../context/ChatContext"; // Import ChatContext
 import Quote from "../sharable/Quote";
 import Message from "../cards/Message";
 import { useSelector } from "react-redux";
+import { getAllMessages } from "../services/firebaseService";
 
-const ChatPage = ({ provider, isOpen, onClose, user }) => {
+const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
   const {
     messages,
     addMessage,
     setVisiblePopupMessages,
     showQuotePopup,
     setShowQuotePopup,
-    setServiceName,
-    setPrice,
-    setDate,
-    setDuration,
-    handleRejectBooking,
-    handleAcceptBooking,
+    setQuoteMessage, setMessages
   } = useContext(ChatContext);
   const [input, setInput] = useState("");
-  const [rejectReason, setRejectReason] = useState("");
   const [showNewMessageBubble, setShowNewMessageBubble] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
   const [type, setType] = useState("");
@@ -43,12 +34,12 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
       const newMessage = {
         sender: {
           id: currentProvider.id,
-          name: currentProvider.username,
+          username: currentProvider.username,
           photoURL: currentProvider?.photoURL ?? null,
         },
         receiver: {
           id: provider.id,
-          name: provider.username,
+          username: provider.username,
           photoURL: provider?.photoURL ?? null,
         },
         message: input,
@@ -56,6 +47,7 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
         users: [currentProvider.id, provider.id],
         type: "message",
       };
+      console.log(newMessage);
       addMessage(newMessage);
       setInput("");
     }
@@ -63,6 +55,13 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
+  useEffect(() => {
+    const unsubscribe = getAllMessages(
+      currentProvider?.id, provider?.id,
+      setMessages,
+    );
+    return () => unsubscribe();
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -91,35 +90,27 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
     }
   }, [messages]);
   const showModal = (message, type) => {
-    setOpenModal(true);
-    setMessage(message);
-    setType(type);
+    setQuoteMessage(message);
+    setShowQuotePopup(true);
+    // setServiceName("");
+    // setPrice("");
+    // setDuration("");
+    // setDate("");
+
+    // setOpenModal(true);
+    // setMessage(message);
+    // setType(type);
   };
 
   return (
     <Drawer
-      title={`${provider.name}`}
+      title={`${provider?.username}`}
       subText={`Online` || `Last seen ${provider.lastSeen}`}
       isOpen={isOpen}
       onClose={() => {
         onClose();
         setVisiblePopupMessages([]);
       }}
-      actionButton={
-        <button
-          onClick={() => {
-            // handleSendQuote();
-            setShowQuotePopup(true);
-            setServiceName("");
-            setPrice("");
-            setDuration("");
-            setDate("");
-          }}
-          className="px-4 py-2 bg-green-500 text-white rounded-md mr-4"
-        >
-          Submit Quote
-        </button>
-      }
     >
       <div className="flex flex-col h-full">
         <div
@@ -128,15 +119,25 @@ const ChatPage = ({ provider, isOpen, onClose, user }) => {
           onScroll={handleScroll}
         >
           <div className="mb-4">
-            {messages.map((message) => (
-              <Message
-                message={message}
-                provider={provider}
-                key={message.timestamp}
-                rejectOffer={(message) => showModal(message, "reject")}
-                acceptOffer={(message) => showModal(message, "accept")}
-              />
-            ))}
+            {messages.map((message) => {
+              console.log(currentProvider?.id, message.provider);
+              if (message.provider === currentProvider?.id && message.type == "request") {
+                return <Message
+                  message={message}
+                  provider={provider}
+                  key={message.id}
+                  rejectOffer={(message) => showModal(message, "reject")}
+                  acceptOffer={(message) => showModal(message, "accept")}
+                />
+              } else {
+                return <Message
+                  message={message}
+                  provider={provider}
+                  key={message.id}
+                />
+              }
+
+            })}
             <div ref={messagesEndRef} />
           </div>
         </div>

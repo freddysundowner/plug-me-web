@@ -1,7 +1,8 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import ChatContext from "../context/ChatContext";
 import Select from "react-select";
-import { FaTimes, FaUserCircle } from "react-icons/fa";
+import { FaTimes, FaCheck } from "react-icons/fa";
+import Loading from "./loading";
 
 const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
   const {
@@ -15,15 +16,39 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
     date,
     handleSendQuote,
     setDurationUnit,
-    durationUnit,
+    quotemessage,
     setShowQuotePopup,
     setShowAlert,
-    showQuotePopup,
+    showQuotePopup, loading
   } = useContext(ChatContext);
-  const handleServiceChange = (selectedOption) => {
-    console.log(selectedOption);
-    setServiceName(selectedOption);
-  };
+
+  useEffect(() => {
+    setPrice(quotemessage?.quote);
+    setServiceName(quotemessage?.service);
+    setDuration(quotemessage?.duration);
+    // setDate(handleDateFormat(quotemessage?.date.seconds * 1000));
+    setDurationUnit(quotemessage?.durationUnit);
+  }, [quotemessage]);
+  const handleDateFormat = (date) => {
+    const dateObj = new Date(date);
+    // const year = newDate.getFullYear();
+    // const month = newDate.getMonth() + 1;
+    // const day = newDate.getDate();
+    // console.log(`${day}-${month}-${year}`);
+
+    const day = dateObj.getDate().toString().padStart(2, '0');
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-indexed
+    const year = dateObj.getFullYear();
+
+    // Format the date as dd/mm/yyyy
+    const formattedDate = `${day}/${month}/${year}`;
+    // console.log(`${day}-${month}-${year}`);
+
+    return formattedDate;
+  }
+
+  // console.log(quotemessage);
+
   const customStyles = {
     control: (provided) => ({
       ...provided,
@@ -44,7 +69,7 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white p-4 rounded-md shadow-md w-full mx-10">
         <div className="flex justify-between items-center ">
-          <h3 className="text-lg font-semibold mb-4">Enter Quote Details</h3>
+          <h3 className="text-lg font-semibold mb-4">Quote Details</h3>
           <button
             onClick={() => setShowQuotePopup(!showQuotePopup)}
             className="text-gray-500 hover:text-gray-700"
@@ -52,46 +77,36 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
             <FaTimes />
           </button>
         </div>
-        <Select
-          options={provider.services}
-          onChange={handleServiceChange}
-          placeholder="Select a Service"
-          styles={customStyles}
-          className="mb-4"
-        />
-        <div className="relative mb-4">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <span className="text-gray-500 sm:text-sm">$</span>
+        <div
+          className=" w-1/2 text-center self-center px-3 mb-4 py-1 text-white bg-primary  border border-primary rounded-full text-sm font-semibold"
+        >
+          {quotemessage?.service?.value}
+        </div>
+        <h4>Time Slot</h4>
+
+        {quotemessage?.slot && <div
+          className=" w-1/2 text-center self-center px-3 mb-4 py-1 text-white bg-primary  border border-primary rounded-full text-sm font-semibold"
+        >
+          {`${quotemessage?.slot.from} - ${quotemessage?.slot.to}`}
+          {quotemessage?.slot.from && (
+            <FaCheck className="inline ml-2 text-white" />
+          )}
+        </div>}
+        <div className="w-full flex mb-4 justify-between">
+          <div className="relative mr-4 flex flex-1 ">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <span className="text-gray-500 sm:text-sm">$</span>
+            </div>
+            <input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="w-full p-2 pl-8 border rounded-md"
+              placeholder="Enter price"
+            />
           </div>
-          <input
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="w-full p-2 pl-8 border rounded-md"
-            placeholder="Enter price"
-          />
         </div>
 
-        <div className="w-full flex mb-4 justify-between">
-          <input
-            type="number"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            className="flex flex-1 p-2  border rounded-md mr-4"
-            placeholder="Enter duration"
-          />
-          <Select
-            options={[
-              { value: "hourly", label: "Hourly" },
-              { value: "daily", label: "Daily" },
-              { value: "monthly", label: "Monthly" },
-            ]}
-            onChange={setDurationUnit}
-            placeholder="Duration"
-            className="w-[200px]"
-            styles={customStyles}
-          />
-        </div>
         <input
           type="date"
           value={date}
@@ -101,14 +116,31 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
         />
 
         <div className="flex justify-end">
-          <button
-            onClick={() => {
-              handleSendQuote(provider);
-            }}
-            className="px-4 py-2 bg-green-500 text-white rounded-md"
-          >
-            Submit Quote
-          </button>
+
+          {loading ? (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                className="bg-green-500 text-white px-4 py-2 rounded"
+              >
+                <Loading color="white" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                  if (quotemessage?.type == "quote") {  
+                    handleSendQuote("update");
+                  } else {
+                    handleSendQuote();
+                  }
+              }}
+              className="px-4 py-2 bg-green-500 text-white rounded-md"
+            >
+              {
+                quotemessage?.type == "quote" ? "Update Quote" : "Send Quote"
+              }
+            </button>)}
         </div>
       </div>
     </div>

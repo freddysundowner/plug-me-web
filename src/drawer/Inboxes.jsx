@@ -1,65 +1,20 @@
 import React, { useContext, useEffect, useState } from "react";
 import ChatContext from "../context/ChatContext"; // Import ChatContext
-import { FaEnvelope } from "react-icons/fa";
 import Drawer from "./Drawer";
 import { timeAgo } from "../utils/timeAgo";
 import DrawerContext from "../context/DrawerContext";
 import { useAuth } from "../context/AuthContext";
-import { getMessagesFromFirestore } from "../services/firebaseService";
+import { getUnreadCount } from "../services/firebaseService";
 
 const Inboxes = ({ isOpen, onClose, provider }) => {
 
-  const { messages, markAsRead, setMessages } = useContext(ChatContext);
-  const { openDrawer, closeDrawer } = useContext(DrawerContext);
-  const [selectedChat, setSelectedChat] = useState(null);
-
-
-  const getLastMessage = (sender) => {
-    return messages
-      .filter((msg) => msg.sender === sender)
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
-  };
-
-  const getUnreadCount = (sender) => {
-    return messages.filter((msg) => msg.sender === sender && !msg.read).length;
-  };
-
-  const senders = [...new Set(messages.map((msg) => msg.sender))];
-
+  const { inbox: inboxes } = useContext(ChatContext);
+  const { currentUser } = useAuth();
   return (
     <Drawer title="Inbox" isOpen={isOpen} onClose={onClose}>
       <div className="p-4">
-        {senders.map((sender) => {
-          const lastMessage = getLastMessage(sender);
-          const unreadCount = getUnreadCount(sender);
-          console.log(lastMessage);
-
-          return (
-            <div
-              key={lastMessage?.timestamp}
-              className="flex items-center p-2 border-b"
-              onClick={() => {
-                setSelectedChat(sender);
-                markAsRead(sender);
-                console.log(provider);
-                closeDrawer("inboxDrawer");
-                openDrawer("chatDrawer", provider);
-              }}
-            >
-              <div className="flex-1">
-                <p className="font-bold">{lastMessage?.sender?.name}</p>
-                <p>{lastMessage.message}</p>
-                <span className="text-xs text-gray-600">
-                  {timeAgo(lastMessage.timestamp)}
-                </span>
-              </div>
-              {unreadCount > 0 && (
-                <div className="ml-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
-                  {unreadCount}
-                </div>
-              )}
-            </div>
-          );
+        {inboxes.map((inbox) => {
+          return <InboxCard provider={provider} key={inbox?.timestamp} inbox={inbox} currentUser={currentUser} />;
         })}
       </div>
     </Drawer>
@@ -67,3 +22,48 @@ const Inboxes = ({ isOpen, onClose, provider }) => {
 };
 
 export default Inboxes;
+
+const InboxCard = ({ inbox, currentUser, provider }) => {
+  const { openDrawer, closeDrawer } = useContext(DrawerContext);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+
+    getUnreadCount(inbox?.id, currentUser?.uid).then((count) => {
+      setUnreadCount(count);
+    });
+
+
+  }, [inbox]);
+
+  return (
+    <div
+      key={inbox?.timestamp}
+      className="flex items-center p-2 border-b"
+      onClick={() => {
+        closeDrawer("inboxDrawer");
+        let p = null;
+        if (inbox?.sender?.id === provider?.id) {
+          p = inbox?.receiver
+        } else {
+          p = inbox?.sender
+        }
+        console.log(inbox?.id);
+        openDrawer("chatDrawer", p, inbox?.id);
+      }}
+    >
+      <div className="flex-1">
+        <p className="font-bold">{inbox?.sender?.username}</p>
+        <p>{inbox.message}</p>
+        <span className="text-xs text-gray-600">
+          {timeAgo(inbox.timestamp)}
+        </span>
+      </div>
+      {unreadCount > 0 && (
+        <div className="ml-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
+          {unreadCount}
+        </div>
+      )}
+    </div>
+  );
+}

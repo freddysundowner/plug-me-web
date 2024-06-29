@@ -1,11 +1,8 @@
 import React, { createContext, useState, useEffect } from "react";
 import {
   addMessageToFirestore,
-  getMessagesFromFirestore,
   updateMessageInFirestore,
 } from "../services/firebaseService";
-import { useAuth } from "./AuthContext";
-import { useSelector } from "react-redux";
 
 const ChatContext = createContext();
 
@@ -13,6 +10,8 @@ export const ChatProvider = ({ children }) => {
   const [visiblePopupMessages, setVisiblePopupMessages] = useState([]);
   const [durationUnit, setDurationUnit] = useState("hours");
   const [showQuotePopup, setShowQuotePopup] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [quotemessage, setQuoteMessage] = useState({});
   const [showAlert, setShowAlert] = useState({
     show: false,
     message: "All fields are require",
@@ -24,29 +23,45 @@ export const ChatProvider = ({ children }) => {
   const [date, setDate] = useState("");
   const [duration, setDuration] = useState("");
   const [messages, setMessages] = useState([]);
+  const [inbox, setInbox] = useState([]);
 
   const addMessage = async (message) => {
-    console.log(message);
     await addMessageToFirestore(message);
   };
 
-  const handleSendQuote = (provider) => {
-    if (serviceName?.value?.trim() && price.trim() && duration.trim()) {
+  const handleSendQuote = async (type) => {
+    if (price <= 0) {
+      setShowAlert({
+        show: true,
+        message: "Please enter a valid price",
+        error: true,
+      });
+      return
+    }
+    if (date.trim() === "") {
+      setShowAlert({
+        show: true,
+        message: "Please enter a valid date",
+        error: true,
+      });
+      return
+    }
+    if (quotemessage?.service?.value?.trim() && price.trim() && date.trim()) {
       const newQuote = {
-        id: quotes.length + 1,
-        sender: provider.name,
-        text: `Service: ${
-          serviceName?.value
-        }, Price: $${price}, Duration: ${duration} ${durationUnit?.value}${
-          date ? `, Date: ${date}` : ""
-        }`,
-        timestamp: new Date().toLocaleTimeString(),
-        type: "quote",
-        status: "pending",
-        service: serviceName, // Keep reference of the service
-      };
-      addMessage(newQuote);
-      setQuotes([...quotes, newQuote]);
+        ...quotemessage, date: date, quote: price, type: 'quote', status: "pending", message: `Hi ${quotemessage?.sender?.username}, attached is my quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${quotemessage?.from} to ${quotemessage?.to}. Kindly accept or decline.`,
+        timestamp: Date.now(),
+      }
+      console.log(type, quotemessage.id)
+      if (type === "update") {
+        await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
+          status: "updated",
+        });
+      } else {
+        await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
+          status: "accepted",
+        });
+      }
+      await addMessage(newQuote);
       setShowQuotePopup(false);
     } else {
       setShowAlert({
@@ -173,7 +188,7 @@ export const ChatProvider = ({ children }) => {
         setShowAlert,
         handleRejectBooking,
         handleAcceptBooking,
-        setMessages,
+        setMessages, inbox, setInbox, quotemessage, setQuoteMessage, loading, setLoading
       }}
     >
       {children}

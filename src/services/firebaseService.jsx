@@ -10,6 +10,7 @@ import {
   addDoc,
   where,
   setDoc,
+  getDoc, increment
 } from "firebase/firestore";
 import { db } from "../auth/firebaseConfig";
 
@@ -40,15 +41,14 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRadians(lat2)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c; // Distance in kilometers
 };
 
-export const getProviders = async () => {
-  // Get user's current position
+export const getProviders = async (provider) => {
   const getCurrentPosition = () => {
     return new Promise((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject);
@@ -59,9 +59,21 @@ export const getProviders = async () => {
   const userLat = position.coords.latitude;
   const userLon = position.coords.longitude;
 
-  const querySnapshot = await getDocs(collection(db, "users"));
+  let usersQuery = query(
+    collection(db, "users"),
+    where("isProvider", "==", true),
+    orderBy("distance", "asc")
+  );
+  if (provider) {
+    usersQuery = query(
+      usersQuery,
+      where("id", "!=", provider.id)
+    );
+  }
+
+
+  const querySnapshot = await getDocs(usersQuery);
   const providersList = querySnapshot.docs
-    .filter((doc) => doc.data().isProvider)
     .map((doc) => {
       const providerData = doc.data();
       const providerLocation = providerData.geopoint;
@@ -82,6 +94,7 @@ export const getProviders = async () => {
   return providersList;
 };
 export const getThreadId = async (currentUserId, recipientUserId) => {
+  console.log("currentUserId", currentUserId, "recipientUserId", recipientUserId);
   try {
     // Query to check if a thread exists between the current user and the recipient
     const inboxRef = collection(db, "inbox");
@@ -106,34 +119,41 @@ export const getThreadId = async (currentUserId, recipientUserId) => {
 };
 export const addMessageToFirestore = async (message) => {
   try {
-    // Get the thread ID if it exists
-    const threadId = await getThreadId(
+    let threadId = await getThreadId(
       message?.sender?.id,
       message?.receiver?.id
     );
-    console.log("threadId ", threadId);
 
     let threadRef = null;
+    const messageWithReadStatus = {
+      ...message,
+      read: {
+        [message.sender.id]: true,  // Sender has read the message
+        [message.receiver.id]: false // Receiver has not read the message
+      }, unreadCounts: {
+        [message.receiver.id]: increment(1)
+      }
+    };
+
     if (threadId) {
       // Thread exists, add the message to the existing thread
       threadRef = doc(db, "inbox", threadId);
-      await addDoc(collection(threadRef, "messages"), message);
+      await addDoc(collection(threadRef, "messages"), { ...messageWithReadStatus, threadId });
+      await updateDoc(threadRef, { ...messageWithReadStatus, threadId });
     } else {
       // Thread does not exist, create a new thread
-      threadRef = doc(collection(db, "inbox"), Date.now().toString());
-      await setDoc(threadRef, message, { merge: true });
-      await addDoc(collection(threadRef, "messages"), message);
+      threadId = Date.now().toString();
+      threadRef = doc(collection(db, "inbox"), threadId);
+      await setDoc(threadRef, { ...messageWithReadStatus, threadId }, { merge: true });
+      await addDoc(collection(threadRef, "messages"), { ...messageWithReadStatus, threadId });
     }
   } catch (error) {
     console.error("Error adding message to Firestore:", error);
   }
-  // const threadRef = doc(db, "inbox", Date.now().toString());
-  // await addDoc(collection(threadRef, "messages"), message);
-  // await setDoc(threadRef, message, { merge: true });
+
 };
 
-export const getMessagesFromFirestore = (currentUser, callback) => {
-  console.log(currentUser);
+export const getInboxMessages = (currentUser, callback) => {
   const q = query(
     collection(db, "inbox"),
     where("users", "array-contains", currentUser?.uid)
@@ -154,7 +174,6 @@ export const updateMessageInFirestore = async (threadId, messageId, data) => {
 
 
 export const getAllMessages = (currentUserUid, recipientUserUid, callback) => {
-  // Query to find the thread that contains both users
   const q = query(
     collection(db, "inbox"),
     where("users", "array-contains", currentUserUid)
@@ -167,15 +186,14 @@ export const getAllMessages = (currentUserUid, recipientUserUid, callback) => {
     // Find the thread that contains both users
     snapshot.forEach((doc) => {
       const data = doc.data();
-      if (data.participants.includes(recipientUserUid)) {
+      if (data.users.includes(recipientUserUid)) {
         threadId = doc.id;
       }
     });
 
     if (threadId) {
-      // If thread is found, query the messages collection within that thread
       const messagesQuery = query(
-        collection(db, "inbox", threadId, "messages")
+        collection(db, "inbox", threadId, "messages"), orderBy("timestamp", "asc")
       );
 
       return onSnapshot(messagesQuery, (messagesSnapshot) => {
@@ -184,10 +202,43 @@ export const getAllMessages = (currentUserUid, recipientUserUid, callback) => {
           ...doc.data(),
         }));
         callback(messages);
+        onInboxOrChatOpen(threadId, currentUserUid, recipientUserUid);
+
       });
     } else {
       // If no thread is found, return an empty array
       callback([]);
     }
   });
+};
+
+export const markLatestMessageAsRead = async (threadId, userId) => {
+  const threadRef = doc(db, "inbox", threadId);
+  await updateDoc(threadRef, {
+    [`read.${userId}`]: true
+  });
+};
+
+// Call this function when the user opens the inbox or chat
+export const onInboxOrChatOpen = async (threadId, currentUserId) => {
+  await markLatestMessageAsRead(threadId, currentUserId);
+  await resetUnreadCount(threadId, currentUserId);
+};
+
+const resetUnreadCount = async (threadId, userId) => {
+  console.log("resetUnreadCount", threadId, userId);
+  const threadRef = doc(db, "inbox", threadId);
+  await updateDoc(threadRef, {
+    [`unreadCounts.${userId}`]: 0
+  });
+};
+
+export const getUnreadCount = async (threadId, userId) => {
+  const threadRef = doc(db, "inbox", threadId);
+  const threadDoc = await getDoc(threadRef);
+  if (threadDoc.exists()) {
+    const data = threadDoc.data();
+    return data.unreadCounts?.[userId] || 0;
+  }
+  return 0;
 };
