@@ -15,11 +15,14 @@ import ChatContext from "../context/ChatContext"; // Import ChatContext for mana
 import Socialicons from "../sharable/Socialicons";
 import WorkHistory from "../sharable/WorkHistory";
 import Rating from "../sharable/Rating";
+import { useAuth } from "../context/AuthContext";
 
 const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
   if (!isOpen) return null;
   const [showBooking, setShowBooking] = useState(false);
   const { openDrawer, closeDrawer } = useContext(DrawerContext);
+  const { currentUser } = useAuth();
+
 
   return (
     <Drawer
@@ -105,8 +108,12 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
 
             <button
               onClick={() => {
-                openDrawer("chatDrawer", provider);
                 closeDrawer("providerDrawer");
+                if (!currentUser) {
+                  openDrawer("loginDrawer");
+                  return;
+                }
+                openDrawer("chatDrawer", provider);
               }}
               className="w-1/2 px-6 py-2 bg-gray-200 text-gray-700 rounded-md shadow-md"
             >

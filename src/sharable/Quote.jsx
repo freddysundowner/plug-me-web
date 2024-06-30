@@ -3,6 +3,10 @@ import ChatContext from "../context/ChatContext";
 import Select from "react-select";
 import { FaTimes, FaCheck } from "react-icons/fa";
 import Loading from "./loading";
+import Button from "./Button";
+import { useSelector } from "react-redux";
+import { TimePicker } from "antd";
+import moment from "moment"; // Import moment for handling time
 
 const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
   const {
@@ -18,17 +22,39 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
     setDurationUnit,
     quotemessage,
     setShowQuotePopup,
-    setShowAlert,
-    showQuotePopup, loading
+    setQuoteMessage,
+    showQuotePopup,
+    loading,
   } = useContext(ChatContext);
 
+  const currentProvider = useSelector(
+    (state) => state.provider.currentProvider
+  );
+  const handleServiceChange = (selectedOption) => {
+    // setSelectedService(selectedOption);
+    // setDate(new Date());
+    // setSelectedSlot(null);
+    // setQuote(null);
+    // setFinalQuote(null);
+    setQuoteMessage({
+      service: selectedOption,
+    });
+  };
   useEffect(() => {
     setPrice(quotemessage?.quote);
     setServiceName(quotemessage?.service);
     setDuration(quotemessage?.duration);
-    // setDate(handleDateFormat(quotemessage?.date.seconds * 1000));
     setDurationUnit(quotemessage?.durationUnit);
   }, [quotemessage]);
+  useEffect(() => {
+    setQuoteMessage({
+      provider:
+        currentProvider?.isProvider == true
+          ? currentProvider?.id
+          : provider?.id,
+    });
+  }, []);
+  console.log(quotemessage);
   const handleDateFormat = (date) => {
     const dateObj = new Date(date);
     // const year = newDate.getFullYear();
@@ -36,8 +62,8 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
     // const day = newDate.getDate();
     // console.log(`${day}-${month}-${year}`);
 
-    const day = dateObj.getDate().toString().padStart(2, '0');
-    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-indexed
+    const day = dateObj.getDate().toString().padStart(2, "0");
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, "0"); // Months are zero-indexed
     const year = dateObj.getFullYear();
 
     // Format the date as dd/mm/yyyy
@@ -45,8 +71,19 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
     // console.log(`${day}-${month}-${year}`);
 
     return formattedDate;
-  }
+  };
 
+  const handleRemoveTimeSlot = (serviceIndex, slotIndex) => {
+    const newSlots = [...currentAvailability[serviceIndex].slots];
+    newSlots.splice(slotIndex, 1);
+    setCurrentAvailability({
+      ...currentAvailability,
+      [serviceIndex]: {
+        ...currentAvailability[serviceIndex],
+        slots: newSlots,
+      },
+    });
+  };
   // console.log(quotemessage);
 
   const customStyles = {
@@ -77,21 +114,83 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
             <FaTimes />
           </button>
         </div>
-        <div
-          className=" w-1/2 text-center self-center px-3 mb-4 py-1 text-white bg-primary  border border-primary rounded-full text-sm font-semibold"
-        >
-          {quotemessage?.service?.value}
-        </div>
-        <h4>Time Slot</h4>
+        <h4>Service</h4>
+        {quotemessage?.id ? (
+          <div className=" w-1/2 text-center self-center px-3 mb-4 py-1 text-white bg-primary  border border-primary rounded-full text-sm font-semibold">
+            {quotemessage?.service?.value}
+          </div>
+        ) : (
+          <Select
+            options={currentProvider.services}
+            onChange={handleServiceChange}
+            placeholder="Select a Service"
+            styles={customStyles}
+            className="mb-4"
+          />
+        )}
 
-        {quotemessage?.slot && <div
-          className=" w-1/2 text-center self-center px-3 mb-4 py-1 text-white bg-primary  border border-primary rounded-full text-sm font-semibold"
-        >
-          {`${quotemessage?.slot.from} - ${quotemessage?.slot.to}`}
-          {quotemessage?.slot.from && (
-            <FaCheck className="inline ml-2 text-white" />
-          )}
-        </div>}
+        <h4>Time Slot</h4>
+        {quotemessage.service?.availability?.map((currentAvailability, index) =>
+          currentAvailability?.slots.map((slot, slotIndex) => (
+            <div key={slotIndex} className="flex items-center mb-2">
+              <TimePicker
+                className="w-full"
+                use12Hours
+                format="h:mm a"
+                placeholder="From"
+                value={slot.from ? moment(slot.from, "h:mm a") : null}
+                onChange={(time, timeString) => {
+                  const newSlots = [...currentAvailability[index].slots];
+                  newSlots[slotIndex].from = timeString;
+                  setCurrentAvailability({
+                    ...currentAvailability,
+                    [index]: {
+                      ...currentAvailability[index],
+                      slots: newSlots,
+                    },
+                  });
+                }}
+              />
+              <span className="mx-2">to</span>
+              <TimePicker
+                className="w-full"
+                use12Hours
+                format="h:mm a"
+                placeholder="To"
+                value={slot.to ? moment(slot.to, "h:mm a") : null}
+                onChange={(time, timeString) => {
+                  const newSlots = [...currentAvailability[index].slots];
+                  newSlots[slotIndex].to = timeString;
+                  setCurrentAvailability({
+                    ...currentAvailability,
+                    [index]: {
+                      ...currentAvailability[index],
+                      slots: newSlots,
+                    },
+                  });
+                }}
+              />
+              <button
+                type="button"
+                className="bg-red-500 text-white px-2 py-1 rounded ml-2"
+                onClick={() => {
+                  currentAvailability?.slots.splice(slotIndex, 1);
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          ))
+        )}
+
+        {quotemessage?.slot && (
+          <div className=" w-1/2 text-center self-center px-3 mb-4 py-1 text-white bg-primary  border border-primary rounded-full text-sm font-semibold">
+            {`${quotemessage?.slot.from} - ${quotemessage?.slot.to}`}
+            {quotemessage?.slot.from && (
+              <FaCheck className="inline ml-2 text-white" />
+            )}
+          </div>
+        )}
         <div className="w-full flex mb-4 justify-between">
           <div className="relative mr-4 flex flex-1 ">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -107,40 +206,18 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
           </div>
         </div>
 
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full p-2 mb-4 border rounded-md"
-          placeholder="Enter date (optional)"
-        />
-
         <div className="flex justify-end">
-
-          {loading ? (
-            <div className="flex justify-center">
-              <button
-                type="button"
-                className="bg-green-500 text-white px-4 py-2 rounded"
-              >
-                <Loading color="white" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => {
-                  if (quotemessage?.type == "quote") {  
-                    handleSendQuote("update");
-                  } else {
-                    handleSendQuote();
-                  }
-              }}
-              className="px-4 py-2 bg-green-500 text-white rounded-md"
-            >
-              {
-                quotemessage?.type == "quote" ? "Update Quote" : "Send Quote"
+          <Button
+            callback={() => {
+              if (quotemessage?.type == "quote") {
+                handleSendQuote("update");
+              } else {
+                handleSendQuote();
               }
-            </button>)}
+            }}
+            loading={loading}
+            text={quotemessage?.type == "quote" ? "Update Quote" : "Send Quote"}
+          />
         </div>
       </div>
     </div>

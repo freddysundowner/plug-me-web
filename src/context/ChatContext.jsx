@@ -3,6 +3,8 @@ import {
   addMessageToFirestore,
   updateMessageInFirestore,
 } from "../services/firebaseService";
+import { useLoading } from "./LoadingContext";
+import { useSelector } from "react-redux";
 
 const ChatContext = createContext();
 
@@ -10,33 +12,38 @@ export const ChatProvider = ({ children }) => {
   const [visiblePopupMessages, setVisiblePopupMessages] = useState([]);
   const [durationUnit, setDurationUnit] = useState("hours");
   const [showQuotePopup, setShowQuotePopup] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [quoteAlert, setQuoteAlert] = useState(false);
+  const [quoteAlertType, setQuoteAlertType] = useState("");
+  const { showLoading, hideLoading } = useLoading();
   const [quotemessage, setQuoteMessage] = useState({});
   const [showAlert, setShowAlert] = useState({
     show: false,
     message: "All fields are require",
     error: true,
   });
-  const [quotes, setQuotes] = useState([]);
   const [price, setPrice] = useState("");
   const [serviceName, setServiceName] = useState(null);
   const [date, setDate] = useState("");
   const [duration, setDuration] = useState("");
   const [messages, setMessages] = useState([]);
   const [inbox, setInbox] = useState([]);
+  const currentProvider = useSelector(
+    (state) => state.provider.currentProvider
+  );
 
   const addMessage = async (message) => {
     await addMessageToFirestore(message);
   };
 
   const handleSendQuote = async (type) => {
+    console.log(price, date);
     if (price <= 0) {
       setShowAlert({
         show: true,
         message: "Please enter a valid price",
         error: true,
       });
-      return
+      return;
     }
     if (date.trim() === "") {
       setShowAlert({
@@ -44,25 +51,80 @@ export const ChatProvider = ({ children }) => {
         message: "Please enter a valid date",
         error: true,
       });
-      return
+      return;
     }
     if (quotemessage?.service?.value?.trim() && price.trim() && date.trim()) {
-      const newQuote = {
-        ...quotemessage, date: date, quote: price, type: 'quote', status: "pending", message: `Hi ${quotemessage?.sender?.username}, attached is my quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${quotemessage?.from} to ${quotemessage?.to}. Kindly accept or decline.`,
+      showLoading(true);
+      const message = {
+        sender: {
+          id: currentProvider.id,
+          username: currentProvider.username,
+          photoURL: currentProvider?.photoURL ?? null,
+        },
+        receiver: quotemessage?.sender,
         timestamp: Date.now(),
-      }
-      console.log(type, quotemessage.id)
+        users: [currentProvider.id, quotemessage?.sender.id],
+        type: "message",
+      };
       if (type === "update") {
         await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
           status: "updated",
+          message: `Hi ${
+            quotemessage?.sender?.username
+          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
+            quotemessage?.slot?.from
+          } to ${quotemessage?.slot?.to} has been updated.`,
+        });
+        await addMessage({
+          ...message,
+          message: "Quotation Updated",
+        });
+      } else if (type === "withthdraw") {
+        await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
+          status: "withdrawn",
+          message: `Hi ${
+            quotemessage?.sender?.username
+          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
+            quotemessage?.slot?.from
+          } to ${quotemessage?.slot?.to} has been withdrawn.`,
+        });
+        await addMessage({
+          ...message,
+          message: "Quotation Updated",
+        });
+      } else if (type === "accept") {
+        await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
+          status: "accepted",
+          message: `Hi ${
+            quotemessage?.sender?.username
+          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
+            quotemessage?.slot?.from
+          } to ${quotemessage?.slot?.to} has been accepted.`,
+        });
+        await addMessage({
+          ...message,
+          message: "Quotation Updated",
+        });
+      } else if (type === "reject") {
+        await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
+          status: "rejected",
+          message: `Hi ${
+            quotemessage?.sender?.username
+          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
+            quotemessage?.slot?.from
+          } to ${quotemessage?.slot?.to} has been declined.`,
+        });
+        await addMessage({
+          ...message,
+          message: "Quotation Updated",
         });
       } else {
         await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
           status: "accepted",
         });
       }
-      await addMessage(newQuote);
       setShowQuotePopup(false);
+      hideLoading(true);
     } else {
       setShowAlert({
         show: true,
@@ -72,29 +134,8 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
-  // Inside handleAcceptBooking function
-  const handleAcceptBooking = async (id) => {
-    let message = messages.find((msg) => msg.id === id);
-    if (message) {
-      const acceptanceMessage = {
-        id: Date.now(),
-        sender: "System",
-        text: `Booking accepted.`,
-        timestamp: new Date().toLocaleTimeString(),
-        type: "info",
-        service: message.service, // Keep reference of the service
-      };
-      await addMessage(acceptanceMessage);
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.id === id ? { ...msg, status: "accepted" } : msg
-        )
-      );
-    }
-  };
-
   // Inside handleRejectBooking function
-  const handleRejectBooking = async (id, reason) => {
+  const handleWithdrawReject = async (reason) => {
     if (reason.trim() === "") {
       setShowAlert({
         show: true,
@@ -103,27 +144,29 @@ export const ChatProvider = ({ children }) => {
       });
       return;
     }
-    let message = messages.find((msg) => msg.id === id);
-    if (message) {
-      const rejectionMessage = {
-        id: Date.now(),
-        sender: "System",
-        text: `Booking rejected.\n Reason: ${reason}`,
-        timestamp: new Date().toLocaleTimeString(),
-        type: "info",
-        service: message.service, // Keep reference of the service
-      };
+    showLoading(true);
+    await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
+      status: "rejected",
+      message: reason,
+    });
 
-      await addMessage(rejectionMessage);
-      console.log(rejectionMessage);
-      console.log(id);
-      await updateMessageInFirestore(id, { status: "rejected" });
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.id === id ? { ...msg, status: "rejected" } : msg
-        )
-      );
-    }
+    const message = {
+      sender: {
+        id: currentProvider.id,
+        username: currentProvider.username,
+        photoURL: currentProvider?.photoURL ?? null,
+      },
+      receiver: quotemessage?.sender,
+      timestamp: Date.now(),
+      users: [currentProvider.id, quotemessage?.sender.id],
+      type: "message",
+    };
+    await addMessage({
+      ...message,
+      message: "Quotation Rejected",
+    });
+    setShowQuotePopup(false);
+    hideLoading(true);
   };
 
   useEffect(() => {
@@ -186,9 +229,16 @@ export const ChatProvider = ({ children }) => {
         durationUnit,
         showAlert,
         setShowAlert,
-        handleRejectBooking,
-        handleAcceptBooking,
-        setMessages, inbox, setInbox, quotemessage, setQuoteMessage, loading, setLoading
+        setMessages,
+        inbox,
+        setInbox,
+        quotemessage,
+        setQuoteMessage,
+        quoteAlert,
+        setQuoteAlert,
+        quoteAlertType,
+        setQuoteAlertType,
+        handleWithdrawReject,
       }}
     >
       {children}

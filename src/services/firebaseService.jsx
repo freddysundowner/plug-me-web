@@ -10,7 +10,8 @@ import {
   addDoc,
   where,
   setDoc,
-  getDoc, increment
+  getDoc,
+  increment,
 } from "firebase/firestore";
 import { db } from "../auth/firebaseConfig";
 
@@ -41,9 +42,9 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRadians(lat1)) *
-    Math.cos(toRadians(lat2)) *
-    Math.sin(dLon / 2) *
-    Math.sin(dLon / 2);
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c; // Distance in kilometers
 };
@@ -65,36 +66,36 @@ export const getProviders = async (provider) => {
     orderBy("distance", "asc")
   );
   if (provider) {
-    usersQuery = query(
-      usersQuery,
-      where("id", "!=", provider.id)
-    );
+    usersQuery = query(usersQuery, where("id", "!=", provider.id));
   }
 
-
   const querySnapshot = await getDocs(usersQuery);
-  const providersList = querySnapshot.docs
-    .map((doc) => {
-      const providerData = doc.data();
-      const providerLocation = providerData.geopoint;
-      const distance = calculateDistance(
-        userLat,
-        userLon,
-        providerLocation.latitude,
-        providerLocation.longitude
-      );
+  const providersList = querySnapshot.docs.map((doc) => {
+    const providerData = doc.data();
+    const providerLocation = providerData.geopoint;
+    const distance = calculateDistance(
+      userLat,
+      userLon,
+      providerLocation.latitude,
+      providerLocation.longitude
+    );
 
-      return {
-        id: doc.id,
-        ...providerData,
-        distance: distance.toFixed(2),
-      };
-    });
+    return {
+      id: doc.id,
+      ...providerData,
+      distance: distance.toFixed(2),
+    };
+  });
 
   return providersList;
 };
 export const getThreadId = async (currentUserId, recipientUserId) => {
-  console.log("currentUserId", currentUserId, "recipientUserId", recipientUserId);
+  console.log(
+    "currentUserId",
+    currentUserId,
+    "recipientUserId",
+    recipientUserId
+  );
   try {
     // Query to check if a thread exists between the current user and the recipient
     const inboxRef = collection(db, "inbox");
@@ -128,29 +129,39 @@ export const addMessageToFirestore = async (message) => {
     const messageWithReadStatus = {
       ...message,
       read: {
-        [message.sender.id]: true,  // Sender has read the message
-        [message.receiver.id]: false // Receiver has not read the message
-      }, unreadCounts: {
-        [message.receiver.id]: increment(1)
-      }
+        [message.sender.id]: true, // Sender has read the message
+        [message.receiver.id]: false, // Receiver has not read the message
+      },
+      unreadCounts: {
+        [message.receiver.id]: increment(1),
+      },
     };
 
     if (threadId) {
       // Thread exists, add the message to the existing thread
       threadRef = doc(db, "inbox", threadId);
-      await addDoc(collection(threadRef, "messages"), { ...messageWithReadStatus, threadId });
+      await addDoc(collection(threadRef, "messages"), {
+        ...messageWithReadStatus,
+        threadId,
+      });
       await updateDoc(threadRef, { ...messageWithReadStatus, threadId });
     } else {
       // Thread does not exist, create a new thread
       threadId = Date.now().toString();
       threadRef = doc(collection(db, "inbox"), threadId);
-      await setDoc(threadRef, { ...messageWithReadStatus, threadId }, { merge: true });
-      await addDoc(collection(threadRef, "messages"), { ...messageWithReadStatus, threadId });
+      await setDoc(
+        threadRef,
+        { ...messageWithReadStatus, threadId },
+        { merge: true }
+      );
+      await addDoc(collection(threadRef, "messages"), {
+        ...messageWithReadStatus,
+        threadId,
+      });
     }
   } catch (error) {
     console.error("Error adding message to Firestore:", error);
   }
-
 };
 
 export const getInboxMessages = (currentUser, callback) => {
@@ -172,7 +183,6 @@ export const updateMessageInFirestore = async (threadId, messageId, data) => {
   await updateDoc(messageDocRef, data);
 };
 
-
 export const getAllMessages = (currentUserUid, recipientUserUid, callback) => {
   const q = query(
     collection(db, "inbox"),
@@ -182,32 +192,37 @@ export const getAllMessages = (currentUserUid, recipientUserUid, callback) => {
   // Listen for real-time updates
   return onSnapshot(q, (snapshot) => {
     let threadId = null;
-
-    // Find the thread that contains both users
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.users.includes(recipientUserUid)) {
-        threadId = doc.id;
-      }
-    });
-
-    if (threadId) {
-      const messagesQuery = query(
-        collection(db, "inbox", threadId, "messages"), orderBy("timestamp", "asc")
-      );
-
-      return onSnapshot(messagesQuery, (messagesSnapshot) => {
-        const messages = messagesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        callback(messages);
-        onInboxOrChatOpen(threadId, currentUserUid, recipientUserUid);
-
+    try {
+      // Find the thread that contains both users
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.users.includes(recipientUserUid)) {
+          threadId = doc.id;
+        }
       });
-    } else {
-      // If no thread is found, return an empty array
-      callback([]);
+
+      if (threadId) {
+        const messagesQuery = query(
+          collection(db, "inbox", threadId, "messages"),
+          orderBy("timestamp", "asc")
+        );
+
+        return onSnapshot(messagesQuery, (messagesSnapshot) => {
+          const messages = messagesSnapshot.docs.map((doc) => {
+            return {
+              ...doc.data(),
+              id: doc.id,
+            };
+          });
+          callback(messages);
+        });
+      } else {
+        // If no thread is found, return an empty array
+        callback([]);
+      }
+    } catch (error) {
+    } finally {
+      onInboxOrChatOpen(threadId, currentUserUid, recipientUserUid);
     }
   });
 };
@@ -215,7 +230,7 @@ export const getAllMessages = (currentUserUid, recipientUserUid, callback) => {
 export const markLatestMessageAsRead = async (threadId, userId) => {
   const threadRef = doc(db, "inbox", threadId);
   await updateDoc(threadRef, {
-    [`read.${userId}`]: true
+    [`read.${userId}`]: true,
   });
 };
 
@@ -229,7 +244,7 @@ const resetUnreadCount = async (threadId, userId) => {
   console.log("resetUnreadCount", threadId, userId);
   const threadRef = doc(db, "inbox", threadId);
   await updateDoc(threadRef, {
-    [`unreadCounts.${userId}`]: 0
+    [`unreadCounts.${userId}`]: 0,
   });
 };
 

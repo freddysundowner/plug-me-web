@@ -1,14 +1,12 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
-import {
-  FaPaperPlane,
-  FaTasks,
-} from "react-icons/fa";
+import { FaPaperPlane, FaTasks } from "react-icons/fa";
 import Drawer from "./Drawer"; // Import the reusable Drawer component
 import ChatContext from "../context/ChatContext"; // Import ChatContext
 import Quote from "../sharable/Quote";
 import Message from "../cards/Message";
 import { useSelector } from "react-redux";
 import { getAllMessages } from "../services/firebaseService";
+import Button from "../sharable/Button";
 
 const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
   const {
@@ -17,14 +15,15 @@ const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
     setVisiblePopupMessages,
     showQuotePopup,
     setShowQuotePopup,
-    setQuoteMessage, setMessages
+    setQuoteMessage,
+    setMessages,
+    quoteAlert,
+    setQuoteAlert,
   } = useContext(ChatContext);
   const [input, setInput] = useState("");
   const [showNewMessageBubble, setShowNewMessageBubble] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
   const [type, setType] = useState("");
-  const [message, setMessage] = useState({});
-  const [openmodal, setOpenModal] = useState(false);
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
   );
@@ -47,7 +46,6 @@ const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
         users: [currentProvider.id, provider.id],
         type: "message",
       };
-      console.log(newMessage);
       addMessage(newMessage);
       setInput("");
     }
@@ -57,8 +55,9 @@ const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
   const [isAutoScroll, setIsAutoScroll] = useState(true);
   useEffect(() => {
     const unsubscribe = getAllMessages(
-      currentProvider?.id, provider?.id,
-      setMessages,
+      currentProvider?.id,
+      provider?.id,
+      setMessages
     );
     return () => unsubscribe();
   }, []);
@@ -111,6 +110,28 @@ const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
         onClose();
         setVisiblePopupMessages([]);
       }}
+      actionButton={
+        currentProvider?.isProvider ? (
+          <div className="mr-4">
+            <Button
+              callback={() => {
+                setShowQuotePopup(true);
+              }}
+              text={"Submit a Quote"}
+            />
+          </div>
+        ) : (
+          <div className="mr-4">
+            <Button
+              callback={() => {
+                onClose();
+                setVisiblePopupMessages([]);
+              }}
+              text={"Request a Quote"}
+            />
+          </div>
+        )
+      }
     >
       <div className="flex flex-col h-full">
         <div
@@ -119,24 +140,25 @@ const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
           onScroll={handleScroll}
         >
           <div className="mb-4">
-            {messages.map((message) => {
-              console.log(currentProvider?.id, message.provider);
-              if (message.provider === currentProvider?.id && message.type == "request") {
-                return <Message
-                  message={message}
-                  provider={provider}
-                  key={message.id}
-                  rejectOffer={(message) => showModal(message, "reject")}
-                  acceptOffer={(message) => showModal(message, "accept")}
-                />
+            {messages.map((message, index) => {
+              if (
+                message.provider === currentProvider?.id &&
+                message.type == "request"
+              ) {
+                return (
+                  <Message
+                    message={message}
+                    provider={provider}
+                    key={index}
+                    rejectOffer={(message) => showModal(message, "reject")}
+                    acceptOffer={(message) => showModal(message, "accept")}
+                  />
+                );
               } else {
-                return <Message
-                  message={message}
-                  provider={provider}
-                  key={message.id}
-                />
+                return (
+                  <Message message={message} provider={provider} key={index} />
+                );
               }
-
             })}
             <div ref={messagesEndRef} />
           </div>
@@ -179,32 +201,39 @@ const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
 
       {showQuotePopup && <Quote provider={provider} />}
       <AcceptRejectOffer
-        isOpen={openmodal}
+        isOpen={quoteAlert}
         type={type}
-        message={message}
-        setOpenModal={setOpenModal}
+        setOpenModal={setQuoteAlert}
       />
     </Drawer>
   );
 };
 
 export default ChatPage;
-const AcceptRejectOffer = ({ type, message, isOpen, setOpenModal }) => {
+const AcceptRejectOffer = ({ isOpen, setOpenModal }) => {
   if (isOpen === false) return null;
   const [rejectReason, setRejectReason] = useState("");
-  const { handleRejectBooking } = useContext(ChatContext);
+  const {
+    handleWithdrawReject,
+    quoteAlertType,
+    setQuoteAlert,
+    handleSendQuote,
+    setPrice,
+    setDate,
+    quotemessage,
+  } = useContext(ChatContext);
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white p-4 rounded-md shadow-md w-2/3 mx-10">
         <div className="flex justify-between items-center ">
           <h3 className="text-lg font-semibold mb-4">
-            {type === "accept" ? "" : "Reject Offer"}
+            {quoteAlertType === "accept" ? "" : "Reject Offer"}
           </h3>
           <button onClick={() => setOpenModal(false)} className="text-red-500">
             Close
           </button>
         </div>
-        {type === "reject" && (
+        {quoteAlertType === "reject" && (
           <textarea
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
@@ -217,33 +246,27 @@ const AcceptRejectOffer = ({ type, message, isOpen, setOpenModal }) => {
             }}
           />
         )}
-        {type === "accept" && (
+        {quoteAlertType === "accept" && (
           <p className="text-gray-500 mt-4">
             Are you sure you want to accept this offer?
           </p>
         )}
         <div className="flex justify-end mt-4">
           <div className="flex">
-            {/* <button
-              onClick={() => {
-                setOpenModal(false);
-              }}
-              className="px-4 py-2 bg-red-500 text-white rounded-md"
-            >
-              Cancel
-            </button> */}
-            <button
-              onClick={() => {
-                setOpenModal(false);
-                if (type === "accept") {
+            <Button
+              callback={() => {
+                setQuoteAlert(false);
+                if (quoteAlertType === "accept") {
+                  console.log(quotemessage.quote);
+                  setDate(quotemessage.date);
+                  setPrice(quotemessage.quote);
+                  handleSendQuote("accept");
                 } else {
-                  handleRejectBooking(message.id, rejectReason);
+                  handleWithdrawReject(rejectReason);
                 }
               }}
-              className="px-4 py-2 bg-green-500 text-white rounded-md"
-            >
-              {type === "accept" ? "Yes" : "Submit"}
-            </button>
+              text={quoteAlertType === "accept" ? "Yes" : "Submit"}
+            />
           </div>
         </div>
       </div>
