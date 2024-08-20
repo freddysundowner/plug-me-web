@@ -28,11 +28,13 @@ const daysOptions = [
 const ProfileSettings = () => {
   const dispatch = useDispatch();
   const provider = useSelector((state) => state.provider.currentProvider);
+  console.log(provider);
+  
   const [formData, setFormData] = useState(provider);
   const [servicesOptions, setServicesOptions] = useState([]);
   const [currentAvailability, setCurrentAvailability] = useState(
     formData.services.map(() => ({ day: "", slots: [{ from: "", to: "" }] }))
-  );
+  );  
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 

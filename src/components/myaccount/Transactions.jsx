@@ -64,30 +64,34 @@ const Transactions = () => {
   return (
     <div className="overflow-x-auto">
       <BalanceCard />
-      <table className="min-w-full bg-white">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="py-2 px-3 text-left">Date</th>
-            <th className="py-2 px-3 text-left">Type</th>
-            <th className="py-2 px-3 text-left">Description</th>
-            <th className="py-2 px-3 text-left">Client</th>
-            <th className="py-2 px-3 text-left">Amount</th>
-            <th className="py-2 px-3 text-left">Ref ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          {transactions.map((transaction, index) => (
-            <tr key={index} className="border-t">
-              <td className="py-2 px-3">{transaction.date}</td>
-              <td className="py-2 px-3">{transaction.type}</td>
-              <td className="py-2 px-3">{transaction.description}</td>
-              <td className="py-2 px-3">{transaction.client}</td>
-              <td className="py-2 px-3">{transaction.amount}</td>
-              <td className="py-2 px-3 text-green-500">{transaction.refId}</td>
+      <div className="overflow-y-auto h-[450px]">
+        <table className="min-w-full bg-white">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="py-2 px-3 text-left">Date</th>
+              <th className="py-2 px-3 text-left">Type</th>
+              <th className="py-2 px-3 text-left">Description</th>
+              <th className="py-2 px-3 text-left">Client</th>
+              <th className="py-2 px-3 text-left">Amount</th>
+              <th className="py-2 px-3 text-left">Ref ID</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {transactions.map((transaction, index) => (
+              <tr key={index} className="border-t">
+                <td className="py-2 px-3">{transaction.date}</td>
+                <td className="py-2 px-3">{transaction.type}</td>
+                <td className="py-2 px-3">{transaction.description}</td>
+                <td className="py-2 px-3">{transaction.client}</td>
+                <td className="py-2 px-3">{transaction.amount}</td>
+                <td className="py-2 px-3 text-green-500">
+                  {transaction.refId}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

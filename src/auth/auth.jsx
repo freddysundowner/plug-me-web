@@ -41,6 +41,7 @@ export const signUp = async (email, password, username) => {
       isProvider: false, // or true based on your application logic
       online: true,
       username,
+      id: user.uid,
     };
     await setDoc(doc(db, "users", user.uid), userData);
     store.dispatch(setProvider(userData)); // Dispatch to save in Redux

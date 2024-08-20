@@ -65,11 +65,8 @@ export const getProviders = async (provider) => {
     where("isProvider", "==", true),
     orderBy("distance", "asc")
   );
-  if (provider) {
-    usersQuery = query(usersQuery, where("id", "!=", provider.id));
-  }
-
   const querySnapshot = await getDocs(usersQuery);
+
   const providersList = querySnapshot.docs.map((doc) => {
     const providerData = doc.data();
     const providerLocation = providerData.geopoint;
@@ -87,15 +84,12 @@ export const getProviders = async (provider) => {
     };
   });
 
+  if (provider?.id) {
+    return providersList.filter((doc) => doc.id !== provider.id);
+  }
   return providersList;
 };
 export const getThreadId = async (currentUserId, recipientUserId) => {
-  console.log(
-    "currentUserId",
-    currentUserId,
-    "recipientUserId",
-    recipientUserId
-  );
   try {
     // Query to check if a thread exists between the current user and the recipient
     const inboxRef = collection(db, "inbox");

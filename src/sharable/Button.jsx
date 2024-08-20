@@ -3,7 +3,6 @@ import Loading from "./loading";
 
 const Button = ({ callback, text, background = "bg-green-500", icon }) => {
   const { loading } = useLoading();
-  console.log(loading);
 
   return (
     <>

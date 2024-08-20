@@ -51,13 +51,12 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
     const querySnapshot = await getDocs(collection(db, "services"));
     const servicesList = querySnapshot.docs.map((doc) => ({
       value: doc.id,
-      label: doc.data().label,
+      label: doc.data().name,
     }));
     setServicesOptions(servicesList);
   };
 
   const handleChange = (e) => {
-    console.log(e.target);
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -68,6 +67,8 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
     if (place && place.value && place.value.place_id) {
       const location = await getPlaceDetails(place.value.place_id);
       hideLoading(true);
+      console.log(location);
+      
       // handleChange("location", place?.label);
       setFormData((prev) => ({ ...prev, ["location"]: place?.label }));
       console.log(new GeoPoint(location.lat, location.lng));
@@ -470,6 +471,7 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
     );
   };
 
+  
   const renderServicesAndAvailability = () => (
     <div>
       <h2 className="text-xl font-bold mb-4">Services / Availability</h2>

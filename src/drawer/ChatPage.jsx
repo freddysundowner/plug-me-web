@@ -122,13 +122,6 @@ const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
           </div>
         ) : (
           <div className="mr-4">
-            <Button
-              callback={() => {
-                onClose();
-                setVisiblePopupMessages([]);
-              }}
-              text={"Request a Quote"}
-            />
           </div>
         )
       }

@@ -7,6 +7,7 @@ import Button from "./Button";
 import { useSelector } from "react-redux";
 import { TimePicker } from "antd";
 import moment from "moment"; // Import moment for handling time
+import CustomDatePicker from "./DatePicker";
 
 const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
   const {
@@ -30,15 +31,9 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
   );
+
   const handleServiceChange = (selectedOption) => {
-    // setSelectedService(selectedOption);
-    // setDate(new Date());
-    // setSelectedSlot(null);
-    // setQuote(null);
-    // setFinalQuote(null);
-    setQuoteMessage({
-      service: selectedOption,
-    });
+    setQuoteMessage({ ...quotemessage, service: selectedOption });
   };
   useEffect(() => {
     setPrice(quotemessage?.quote);
@@ -48,43 +43,14 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
   }, [quotemessage]);
   useEffect(() => {
     setQuoteMessage({
+      ...quotemessage,
       provider:
         currentProvider?.isProvider == true
           ? currentProvider?.id
           : provider?.id,
+      receiver: provider,
     });
   }, []);
-  console.log(quotemessage);
-  const handleDateFormat = (date) => {
-    const dateObj = new Date(date);
-    // const year = newDate.getFullYear();
-    // const month = newDate.getMonth() + 1;
-    // const day = newDate.getDate();
-    // console.log(`${day}-${month}-${year}`);
-
-    const day = dateObj.getDate().toString().padStart(2, "0");
-    const month = (dateObj.getMonth() + 1).toString().padStart(2, "0"); // Months are zero-indexed
-    const year = dateObj.getFullYear();
-
-    // Format the date as dd/mm/yyyy
-    const formattedDate = `${day}/${month}/${year}`;
-    // console.log(`${day}-${month}-${year}`);
-
-    return formattedDate;
-  };
-
-  const handleRemoveTimeSlot = (serviceIndex, slotIndex) => {
-    const newSlots = [...currentAvailability[serviceIndex].slots];
-    newSlots.splice(slotIndex, 1);
-    setCurrentAvailability({
-      ...currentAvailability,
-      [serviceIndex]: {
-        ...currentAvailability[serviceIndex],
-        slots: newSlots,
-      },
-    });
-  };
-  // console.log(quotemessage);
 
   const customStyles = {
     control: (provided) => ({
@@ -128,6 +94,10 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
             className="mb-4"
           />
         )}
+        <h4>Date</h4>
+        <div>
+          <CustomDatePicker selectedDate={date} setSelectedDate={setDate} />
+        </div>
 
         <h4>Time Slot</h4>
         {quotemessage.service?.availability?.map((currentAvailability, index) =>

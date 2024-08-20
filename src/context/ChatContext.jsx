@@ -23,7 +23,7 @@ export const ChatProvider = ({ children }) => {
   });
   const [price, setPrice] = useState("");
   const [serviceName, setServiceName] = useState(null);
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(Date.now());
   const [duration, setDuration] = useState("");
   const [messages, setMessages] = useState([]);
   const [inbox, setInbox] = useState([]);
@@ -36,7 +36,7 @@ export const ChatProvider = ({ children }) => {
   };
 
   const handleSendQuote = async (type) => {
-    console.log(price, date);
+    console.log(quotemessage);
     if (price <= 0) {
       setShowAlert({
         show: true,
@@ -45,7 +45,7 @@ export const ChatProvider = ({ children }) => {
       });
       return;
     }
-    if (date.trim() === "") {
+    if (date == undefined) {
       setShowAlert({
         show: true,
         message: "Please enter a valid date",
@@ -53,7 +53,7 @@ export const ChatProvider = ({ children }) => {
       });
       return;
     }
-    if (quotemessage?.service?.value?.trim() && price.trim() && date.trim()) {
+    if (quotemessage?.service?.value?.trim() && price.trim()) {
       showLoading(true);
       const message = {
         sender: {
@@ -61,9 +61,9 @@ export const ChatProvider = ({ children }) => {
           username: currentProvider.username,
           photoURL: currentProvider?.photoURL ?? null,
         },
-        receiver: quotemessage?.sender,
+        receiver: quotemessage?.receiver,
         timestamp: Date.now(),
-        users: [currentProvider.id, quotemessage?.sender.id],
+        users: [currentProvider.id, quotemessage?.receiver.id],
         type: "message",
       };
       if (type === "update") {
@@ -119,9 +119,12 @@ export const ChatProvider = ({ children }) => {
           message: "Quotation Updated",
         });
       } else {
-        await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
-          status: "accepted",
+        await addMessage({
+          ...message,
         });
+        // await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
+        //   status: "accepted",
+        // });
       }
       setShowQuotePopup(false);
       hideLoading(true);
@@ -239,6 +242,7 @@ export const ChatProvider = ({ children }) => {
         quoteAlertType,
         setQuoteAlertType,
         handleWithdrawReject,
+        date,
       }}
     >
       {children}
