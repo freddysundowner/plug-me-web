@@ -5,10 +5,10 @@ import ChatContext from "../context/ChatContext"; // Import ChatContext
 import Quote from "../sharable/Quote";
 import Message from "../cards/Message";
 import { useSelector } from "react-redux";
-import { getAllMessages } from "../services/firebaseService";
+import { getAllMessages, listenForUserAccountChanges } from "../services/firebaseService";
 import Button from "../sharable/Button";
 
-const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
+const ChatPage = ({ provider, isOpen, onClose, thread }) => {
   const {
     messages,
     addMessage,
@@ -18,11 +18,12 @@ const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
     setQuoteMessage,
     setMessages,
     quoteAlert,
-    setQuoteAlert,
+    setQuoteAlert, generatePDF, payInvoice,invoicePaid
   } = useContext(ChatContext);
   const [input, setInput] = useState("");
   const [showNewMessageBubble, setShowNewMessageBubble] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
+  const [activeInvoice, setActiveInvoice] = useState(false)
   const [type, setType] = useState("");
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
@@ -67,18 +68,20 @@ const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
   };
 
   const handleScroll = () => {
-    if (messagesContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } =
-        messagesContainerRef.current;
-      const isAtBottom = scrollHeight - scrollTop === clientHeight;
-      setIsAutoScroll(isAtBottom);
-      if (!isAtBottom) {
-        setNewMessagesCount(messages.length - newMessagesCount);
-      } else {
-        setNewMessagesCount(0);
-      }
-      setShowNewMessageBubble(!isAtBottom && messages.length > 0);
-    }
+    // if (messagesContainerRef.current) {
+    //   const { scrollTop, scrollHeight, clientHeight } =
+    //     messagesContainerRef.current;
+    //   const isAtBottom = scrollHeight - scrollTop === clientHeight;
+    //   setIsAutoScroll(isAtBottom);
+    //   let unreadCount = messages.filter((msg) => msg.unreadCounts[currentProvider?.id] > 0);
+    //   console.log(unreadCount.length);
+    //   if (!isAtBottom) {
+    //     setNewMessagesCount(unreadCount.length);
+    //   } else {
+    //     setNewMessagesCount(0);
+    //   }
+    //   setShowNewMessageBubble(!isAtBottom && unreadCount.length > 0);
+    // }
   };
 
   useEffect(() => {
@@ -101,6 +104,15 @@ const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
     // setType(type);
   };
 
+  useEffect(() => {
+    if (currentProvider?.id) {
+      listenForUserAccountChanges(currentProvider.id, (user) => {
+        console.log("user ", user);
+        setActiveInvoice(user.currentInvoice)
+      });
+    }
+  }, [currentProvider]);
+
   return (
     <Drawer
       title={`${provider?.username}`}
@@ -111,19 +123,37 @@ const ChatPage = ({ provider, isOpen, onClose, user, thread }) => {
         setVisiblePopupMessages([]);
       }}
       actionButton={
-        currentProvider?.isProvider ? (
-          <div className="mr-4">
-            <Button
-              callback={() => {
-                setShowQuotePopup(true);
-              }}
-              text={"Submit a Quote"}
-            />
-          </div>
-        ) : (
-          <div className="mr-4">
-          </div>
-        )
+        <div className="mr-4">
+          {
+            activeInvoice ? (
+              <div className="mr-4 gap-2 flex flex-row">
+                <Button
+                  background="bg-yellow-400"
+                  callback={() => {
+                    generatePDF("Invoice", thread);
+                  }}
+                  text="View Pending Invoice"
+                />
+                {currentProvider.isProvider == false ? <Button
+                  callback={() => {
+                    payInvoice(thread??activeInvoice.threadId);
+                  }}
+                  text="Pay"
+                /> : <></>}
+              </div>
+            ) :
+
+              // currentProvider.isProvider ? <Button
+              //   callback={() => {
+              //     setShowQuotePopup(true);
+              //   }}
+              //   text={"Submit a Quote"}
+              // />
+              //   :
+                <></>
+          }
+
+        </div>
       }
     >
       <div className="flex flex-col h-full">

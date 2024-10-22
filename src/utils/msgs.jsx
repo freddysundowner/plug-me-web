@@ -3,48 +3,34 @@ import { dateFormat } from "./dateFormat";
 export const generateQuoteMsgs = (quote, currentUserId) => {
   let messages = {};
   switch (quote.type) {
-    case "request":
+    case "quote":
       if (quote.status == "pending") {
         messages = {
-          provider: `${quote.sender.username} has requested a quote for ${
+          provider: `${quote.sender.username} has sent an offer for ${
             quote.service.value
           } on ${dateFormat(quote?.date.seconds * 1000)} from ${
             quote.slot.from
-          } to ${quote.slot.to}`,
+          } to ${quote.slot.to} for $${quote.quote}`,
           user: `You have requested a quote from ${
             quote.receiver.username
           } for ${quote.service.value} on ${dateFormat(
             quote?.date.seconds * 1000
           )} from ${quote.slot.from} to ${quote.slot.to}`,
         };
-      } else if (quote.status == "rejected") {
-        messages = {
-          provider: `You have rejected the quote from ${
-            quote.sender.username
-          } for ${quote.service.value} on ${dateFormat(
-            quote?.date.seconds * 1000
-          )} from ${quote.slot.from} to ${quote.slot.to}`,
-          user: `${quote.receiver.username} has rejected your quote request for ${quote.service.value},\n Reason: ${quote.message}`,
-        };
       }
-      break;
+      // else if (quote.status == "rejected") {
       //   messages = {
-      //     provider: `${quote.sender.username} has requested a quote for ${
-      //       quote.service.value
-      //     } on ${dateFormat(quote?.date.seconds * 1000)} from ${
-      //       quote.slot.from
-      //     } to ${quote.slot.to}`,
-      //     user: `You have requested a quote from ${quote.receiver.username} for ${
-      //       quote.service.value
-      //     } on ${dateFormat(quote?.date.seconds * 1000)} from ${
-      //       quote.slot.from
-      //     } to ${quote.slot.to}`,
+      //     provider: `You have rejected the quote from ${
+      //       quote.sender.username
+      //     } for ${quote.service.value} on ${dateFormat(
+      //       quote?.date.seconds * 1000
+      //     )} from ${quote.slot.from} to ${quote.slot.to}`,
+      //     user: `${quote.receiver.username} has rejected your quote request for ${quote.service.value},\n Reason: ${quote.message}`,
       //   };
-      break;
-    case "quote":
+      // }
       if (quote.status == "accepted") {
         messages = {
-          provider: `Quote submitted successfully`,
+          provider: `You have successfully accept the offer, job is in progress`,
           user: `You have received a quote for ${
             quote.service.value
           } on ${dateFormat(quote?.date.seconds * 1000)} from ${
@@ -66,16 +52,23 @@ export const generateQuoteMsgs = (quote, currentUserId) => {
             user: `Quote rejected successfully`,
           };
         }
-      } else if (quote.status == "pending") {
+      } else
+        // if (quote.status == "pending") {
+        // messages = {
+        //   provider: `Quote submitted successfully`,
+        //   user: `You have received a quote for ${
+        //     quote.service.value
+        //   } on ${dateFormat(quote?.date.seconds * 1000)} from ${
+        //     quote.slot.from
+        //   } to ${quote.slot.to}`,
+        // };
+        // } else
+          if (quote.status == "completed") {
         messages = {
-          provider: `Quote submitted successfully`,
-          user: `You have received a quote for ${
-            quote.service.value
-          } on ${dateFormat(quote?.date.seconds * 1000)} from ${
-            quote.slot.from
-          } to ${quote.slot.to}`,
+          provider: `Task Completed successfully`,
+          user: `Task Completed successfully`,
         };
-      }
+      } 
       break;
 
     default:

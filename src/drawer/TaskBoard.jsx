@@ -1,73 +1,49 @@
-import React, { useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import TaskList from "../components/myaccount/TaskList";
 import Drawer from "./Drawer";
-
-const TaskBoard = ({ isOpen = false, onClose = () => {} }) => {
+import ChatContext from "../context/ChatContext";
+import { getInvoice } from "../services/firebaseService";
+import { useAuth } from "../context/AuthContext";
+import DrawerContext from "../context/DrawerContext";
+const TaskBoard = ({ isOpen = false, onClose = () => { } }) => {
+  const [invoices, setInvoices] = useState([])
   const [currentTab, setCurrentTab] = useState("active");
 
-  const tasks = {
-    active: [
-      {
-        title:
-          "Increase confidence with TrustPilot reviews, Increase confidence with TrustPilot reviews",
-        description: "Custom Task",
-        tag: "Custom Task",
-        tagColor: "gray",
-        deliveryDays: 5,
-        assignedTo: "James Terry",
-        status: "Waiting Approval",
-        statusColor: "blue",
-        price: 10,
-      },
-      {
-        title: "Increase conversion of your email mailchimp campaign",
-        description: "Marketing & Sales",
-        tag: "Marketing & Sales",
-        tagColor: "red",
-        deliveryDays: 2,
-        assignedTo: "Bjorn Jönsson",
-        status: "In Progress",
-        statusColor: "blue",
-        price: 12,
-      },
-    ],
-    completed: [
-      {
-        title: "Get a complete store audit by our marketing expert",
-        description: "Custom Task",
-        tag: "Custom Task",
-        tagColor: "gray",
-        deliveryDays: 5,
-        assignedTo: "Emily Tunberg",
-        status: "Completed",
-        statusColor: "green",
-      },
-    ],
-    archived: [
-      {
-        title: "Be social - Sell your stock directly on Instagram",
-        description: "Integrations",
-        tag: "Integrations",
-        tagColor: "blue",
-        deliveryDays: 3,
-        assignedTo: "Unassigned",
-        status: "Archived",
-        statusColor: "gray",
-      },
-    ],
-    closed: [],
-  };
+  const { openDrawer, closeDrawer } = useContext(DrawerContext);
+  const { taskBoardOpen, setIsTaskBoardOpen } = useContext(ChatContext)
+  const { currentUser } = useAuth();
+  useEffect(() => {
+    getInvoice(
+      currentUser?.uid,
+    ).then((invoices) => {
+      setInvoices(invoices)
+    })
+  }, [currentUser]);
+
+  const taskClicked = (task) => {
+    setIsTaskBoardOpen(false)
+    let p = null;
+    if (task?.sender?.id === currentUser?.id) {
+      p = task?.receiver
+    } else {
+      p = task?.sender
+    }
+    openDrawer("chatDrawer", p, task?.thread, null, task?.thread);
+  }
 
   const renderTabContent = () => {
     switch (currentTab) {
       case "active":
-        return <TaskList tasks={tasks.active} title="Current Tasks" />;
+        return invoices.length == 0 ? <h2 className="text-center">No Tasks</h2> : <TaskList tasks={invoices} title="Current Tasks" callBack={taskClicked} />;
       case "completed":
-        return <TaskList tasks={tasks.completed} title="Completed Tasks" />;
+        let paidTasks = invoices.filter((invoice) => invoice.status == "completed")
+        return paidTasks.length == 0 ? <h2 className="text-center">No Tasks</h2> : <TaskList tasks={paidTasks} currentUserId={currentUser?.uid} />;
       case "archived":
-        return <TaskList tasks={tasks.archived} title="Archived Tasks" />;
+        let pendingTasks = invoices.filter((invoice) => invoice.status == "pending")
+        return pendingTasks.length == 0 ? <h2 className="text-center">No Tasks</h2> : <TaskList tasks={pendingTasks} />;
       case "closed":
-        return <TaskList tasks={tasks.closed} title="Closed Tasks" />;
+        let closedTasks = invoices.filter((invoice) => invoice.status == "rejected")
+        return closedTasks.length == 0 ? <h2 className="text-center">No Tasks</h2> : <TaskList tasks={closedTasks} title="Closed Tasks" />;
       default:
         return null;
     }
@@ -86,46 +62,45 @@ const TaskBoard = ({ isOpen = false, onClose = () => {} }) => {
         <div className="flex mb-4">
           <button
             onClick={() => setCurrentTab("active")}
-            className={`text-lg font-semibold mr-10 ${
-              currentTab === "active"
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-600"
-            }`}
+            className={`text-lg font-semibold mr-10 ${currentTab === "active"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-600"
+              }`}
           >
-            Active Tasks
+            All Tasks
           </button>
           <button
             onClick={() => setCurrentTab("completed")}
-            className={`text-lg font-semibold mr-10 ${
-              currentTab === "completed"
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-600"
-            }`}
+            className={`text-lg font-semibold mr-10 ${currentTab === "completed"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-600"
+              }`}
           >
             Completed
           </button>
           <button
             onClick={() => setCurrentTab("archived")}
-            className={`text-lg font-semibold mr-10 ${
-              currentTab === "archived"
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-600"
-            }`}
+            className={`text-lg font-semibold mr-10 ${currentTab === "archived"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-600"
+              }`}
           >
-            Archived
+            Pending
           </button>
           <button
             onClick={() => setCurrentTab("closed")}
-            className={`text-lg font-semibold mr-4 ${
-              currentTab === "closed"
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-600"
-            }`}
+            className={`text-lg font-semibold mr-4 ${currentTab === "closed"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-600"
+              }`}
           >
-            Closed
+            Rejected
           </button>
         </div>
-        {renderTabContent()}
+        <div className="overflow-y-auto max-h-[600px]">
+
+          {renderTabContent()}
+        </div>
       </div>
     </Drawer>
   );

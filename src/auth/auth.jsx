@@ -6,8 +6,8 @@ import {
   signOut,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import store from "../redux/store"; // Import the store
-import { setProvider, clearProvider } from "../redux/features/providerSlice"; // Import the actions
+import store from "../redux/store"; 
+import { setProvider, clearProvider } from "../redux/features/providerSlice"; 
 
 export const signIn = async (email, password) => {
   try {
@@ -19,12 +19,12 @@ export const signIn = async (email, password) => {
     const user = userCredential.user;
     const userDoc = await getDoc(doc(db, "users", user.uid));
     if (userDoc.exists()) {
-      store.dispatch(setProvider(userDoc.data())); // Dispatch to save in Redux
+      store.dispatch(setProvider(userDoc.data())); 
     }
     console.log("User signed in");
   } catch (error) {
     console.error("Error signing in:", error);
-    throw error; // Throw error to be caught in handleSubmit
+    throw error; 
   }
 };
 
@@ -38,17 +38,17 @@ export const signUp = async (email, password, username) => {
     const user = userCredential.user;
     const userData = {
       email: user.email,
-      isProvider: false, // or true based on your application logic
+      isProvider: false, 
       online: true,
       username,
       id: user.uid,
     };
     await setDoc(doc(db, "users", user.uid), userData);
-    store.dispatch(setProvider(userData)); // Dispatch to save in Redux
+    store.dispatch(setProvider(userData)); 
     console.log("User signed up and data added to Firestore");
   } catch (error) {
     console.error("Error signing up:", error);
-    throw error; // Throw error to be caught in handleSubmit
+    throw error; 
   }
 };
 

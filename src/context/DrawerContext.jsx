@@ -14,10 +14,10 @@ export const DrawerProvider = ({ children }) => {
   });
 
   const openDrawer = useCallback(
-    (drawer, provider = null, messages = [], type = "login") => {
+    (drawer, provider = null, messages = [], type = "login", thread) => {
       setDrawerState((prevState) => ({
         ...prevState,
-        [drawer]: { isOpen: true, selectedProvider: provider, messages, type },
+        [drawer]: { isOpen: true, selectedProvider: provider, messages, type, thread },
       }));
     },
     []

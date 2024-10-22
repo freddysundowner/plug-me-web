@@ -30,7 +30,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import ProviderFormDrawer from "../drawer/ProviderFormDrawer";
 import NavBar from "./navbar";
 import {
-  getProviders,
+  getProviders, listenForUserAccountChanges
 } from "../services/firebaseService";
 import { LoadingProvider } from "../context/LoadingContext";
 
@@ -54,8 +54,8 @@ const useGeolocation = (defaultCenter, defaultZoom) => {
               ...userDoc.data(),
               id: user.uid,
               geopoint: {
-                latitude: user?.geopoint?.latitude,
-                longitude: user?.geopoint?.longitude,
+                latitude: userDoc.data()?.geopoint?.latitude,
+                longitude: userDoc.data()?.geopoint?.longitude,
               },
             })
           ); // Save user data in Redux
@@ -181,6 +181,7 @@ const Home = () => {
       {drawerState.chatDrawer.isOpen && (
         <ChatPage
           provider={drawerState.chatDrawer.selectedProvider}
+          thread={drawerState.chatDrawer.thread}
           isOpen={drawerState.chatDrawer.isOpen}
           onClose={() => closeDrawer("chatDrawer")}
           messages={messages}

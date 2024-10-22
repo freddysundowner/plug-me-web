@@ -1,10 +1,17 @@
 import React, { createContext, useState, useEffect } from "react";
 import {
   addMessageToFirestore,
-  updateMessageInFirestore,
+  updateMessageInFirestore, addInvoice, updateProviderData, addPayment
 } from "../services/firebaseService";
+import jsPDF from "jspdf";
 import { useLoading } from "./LoadingContext";
 import { useSelector } from "react-redux";
+import { dateFormat } from "../utils/dateFormat";
+import {
+  updateProvider,
+} from "../redux/features/providerSlice";
+import { useDispatch } from "react-redux";
+import { increment } from "firebase/firestore";
 
 const ChatContext = createContext();
 
@@ -16,6 +23,11 @@ export const ChatProvider = ({ children }) => {
   const [quoteAlertType, setQuoteAlertType] = useState("");
   const { showLoading, hideLoading } = useLoading();
   const [quotemessage, setQuoteMessage] = useState({});
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const { invoices, setInvoices } = useState([]);
+  const [taskBoardOpen, setIsTaskBoardOpen] = useState(false);
+  const [pdfData, setPdfData] = useState(null);
+  const dispatch = useDispatch();
   const [showAlert, setShowAlert] = useState({
     show: false,
     message: "All fields are require",
@@ -31,13 +43,142 @@ export const ChatProvider = ({ children }) => {
     (state) => state.provider.currentProvider
   );
 
+
   const addMessage = async (message) => {
     await addMessageToFirestore(message);
   };
+  const generateReceipePDF = (title = "Receipt", thread = null) => {
+    let newQuote = quotemessage;
+    const doc = new jsPDF();
+    console.log(thread)
+    if (thread != null) {
+      const filteredMessages = messages.filter((msg) => String(msg?.threadId) === String(thread) && msg?.type == 'quote' && msg.paid == true);
+      console.log(messages);
+      newQuote = filteredMessages[0]
+    }
 
+    // Add title and other details
+    doc.setFontSize(18);
+    doc.text(title, 105, 20, null, null, "center");
+
+    doc.setFontSize(12);
+    doc.text(`Date: ${dateFormat(newQuote.date?.seconds * 1000)}`, 14, 40);
+    doc.text(`From: ${newQuote?.slot?.from}`, 14, 50);
+    doc.text(`To: ${newQuote?.slot?.to}`, 14, 60);
+
+    // Add quotation details in a table
+    const quoteData = [
+      ["Description", "Value"],
+      ["Service", newQuote.service.value],
+      ["Price", `$${newQuote.quote}`],
+    ];
+
+    doc.autoTable({
+      startY: 70,
+      head: [quoteData[0]],
+      body: quoteData.slice(1),
+      styles: { fontSize: 10, halign: "center", valign: "middle" },
+      theme: "striped",
+    });
+
+    // Add message
+    doc.text(`Paid Via: ${newQuote.paidVia}`, 14, doc.autoTable.previous.finalY + 20);
+    doc.text(
+      "Thank you for showing interest in our service.",
+      14,
+      doc.autoTable.previous.finalY + 30,
+      { maxWidth: 180 }
+    );
+
+    const pdfBlob = doc.output("blob");
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    setPdfData(pdfUrl);
+    setModalIsOpen(true);
+  };
+  const generatePDF = (title = "Quotation", thread = null) => {
+    let newQuote = quotemessage;
+    const doc = new jsPDF();
+    console.log(thread)
+    if (thread != null) {
+      const filteredMessages = messages.filter((msg) => String(msg?.threadId) === String(thread) && msg?.type == 'quote' && msg.paid == false);
+      console.log(messages);
+      newQuote = filteredMessages[0]
+    }
+
+    // Add title and other details
+    doc.setFontSize(18);
+    doc.text(title, 105, 20, null, null, "center");
+
+    doc.setFontSize(12);
+    doc.text(`Date: ${dateFormat(newQuote.date?.seconds * 1000)}`, 14, 40);
+    doc.text(`From: ${newQuote?.slot?.from}`, 14, 50);
+    doc.text(`To: ${newQuote?.slot?.to}`, 14, 60);
+
+    // Add quotation details in a table
+    const quoteData = [
+      ["Description", "Value"],
+      ["Service", newQuote.service.value],
+      ["Price", `$${newQuote.quote}`],
+    ];
+
+    doc.autoTable({
+      startY: 70,
+      head: [quoteData[0]],
+      body: quoteData.slice(1),
+      styles: { fontSize: 10, halign: "center", valign: "middle" },
+      theme: "striped",
+    });
+
+    // Add message
+    doc.text("Message:", 14, doc.autoTable.previous.finalY + 20);
+    doc.text(
+      "Thank you for showing interest in our service.",
+      14,
+      doc.autoTable.previous.finalY + 30,
+      { maxWidth: 180 }
+    );
+
+    const pdfBlob = doc.output("blob");
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    setPdfData(pdfUrl);
+    setModalIsOpen(true);
+  };
+  const payInvoice = (threadId) => {
+    const invoiceRes = messages.filter((msg) => String(msg?.threadId) === String(threadId) && msg?.type == 'quote' && msg.paid == false);
+    console.log(invoiceRes);
+    if (invoiceRes.length > 0) {
+      let invoice = invoiceRes[0]
+      if (invoice.paid == false) {
+        let payload = {
+          paid: true,
+          paidDate: new Date(),
+          paidBy: currentProvider?.id,
+          paidVia: "stripe",
+          status: "completed"
+        }
+        updateMessageInFirestore(threadId, invoice.id, payload);
+        let transaction = {
+          "amount": invoice.quote,
+          timestamp: Date.now(),
+          "sender": {
+            id: currentProvider?.id,
+            name: currentProvider.username
+          },
+          "paymentMethod": "stripe",
+          "type": "payment",
+          "receiver": invoice.receiver.id == invoice.provider ? invoice.receiver : invoice.sender,
+          date: new Date(),
+          "users": [invoice?.provider, invoice.user]
+        }
+        addPayment(transaction)
+        updateProviderData(invoice?.sender?.id, { currentInvoice: null})
+        updateProviderData(invoice?.receiver?.id, { currentInvoice: null, balance: increment(invoice.quote) })
+      }
+    }
+  }
   const handleSendQuote = async (type) => {
     console.log(quotemessage);
-    if (price <= 0) {
+    if (quotemessage.quote <= 0) {
       setShowAlert({
         show: true,
         message: "Please enter a valid price",
@@ -53,7 +194,7 @@ export const ChatProvider = ({ children }) => {
       });
       return;
     }
-    if (quotemessage?.service?.value?.trim() && price.trim()) {
+    if (quotemessage?.service?.value?.trim()) {
       showLoading(true);
       const message = {
         sender: {
@@ -69,11 +210,10 @@ export const ChatProvider = ({ children }) => {
       if (type === "update") {
         await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
           status: "updated",
-          message: `Hi ${
-            quotemessage?.sender?.username
-          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
-            quotemessage?.slot?.from
-          } to ${quotemessage?.slot?.to} has been updated.`,
+          message: `Hi ${quotemessage?.sender?.username
+            }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${quotemessage?.slot?.from
+            } to ${quotemessage?.slot?.to} has been updated.`,
+          quote: quotemessage?.quote
         });
         await addMessage({
           ...message,
@@ -82,11 +222,9 @@ export const ChatProvider = ({ children }) => {
       } else if (type === "withthdraw") {
         await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
           status: "withdrawn",
-          message: `Hi ${
-            quotemessage?.sender?.username
-          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
-            quotemessage?.slot?.from
-          } to ${quotemessage?.slot?.to} has been withdrawn.`,
+          message: `Hi ${quotemessage?.sender?.username
+            }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${quotemessage?.slot?.from
+            } to ${quotemessage?.slot?.to} has been withdrawn.`,
         });
         await addMessage({
           ...message,
@@ -95,24 +233,25 @@ export const ChatProvider = ({ children }) => {
       } else if (type === "accept") {
         await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
           status: "accepted",
-          message: `Hi ${
-            quotemessage?.sender?.username
-          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
-            quotemessage?.slot?.from
-          } to ${quotemessage?.slot?.to} has been accepted.`,
+          message: `Hi ${quotemessage?.sender?.username
+            }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${quotemessage?.slot?.from
+            } to ${quotemessage?.slot?.to} has been accepted.`,
+          type: "quote"
         });
-        await addMessage({
-          ...message,
-          message: "Quotation Updated",
-        });
+        console.log(quotemessage.provider);
+        await addInvoice(quotemessage.provider, {
+          "threadId": quotemessage.threadId,
+          "invoiceId": quotemessage.id,
+          "status": "pending",
+          client: quotemessage?.user,
+          date: new Date()
+        })
       } else if (type === "reject") {
         await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
           status: "rejected",
-          message: `Hi ${
-            quotemessage?.sender?.username
-          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
-            quotemessage?.slot?.from
-          } to ${quotemessage?.slot?.to} has been declined.`,
+          message: `Hi ${quotemessage?.sender?.username
+            }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${quotemessage?.slot?.from
+            } to ${quotemessage?.slot?.to} has been declined.`,
         });
         await addMessage({
           ...message,
@@ -242,7 +381,7 @@ export const ChatProvider = ({ children }) => {
         quoteAlertType,
         setQuoteAlertType,
         handleWithdrawReject,
-        date,
+        date, generatePDF, taskBoardOpen, setIsTaskBoardOpen, pdfData, setPdfData, modalIsOpen, invoices, setInvoices, setModalIsOpen, payInvoice, generateReceipePDF
       }}
     >
       {children}

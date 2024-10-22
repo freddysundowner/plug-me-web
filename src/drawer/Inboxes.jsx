@@ -49,7 +49,7 @@ const InboxCard = ({ inbox, currentUser, provider }) => {
           p = inbox?.sender
         }
         console.log(inbox?.id);
-        openDrawer("chatDrawer", p, inbox?.id);
+        openDrawer("chatDrawer", p, inbox?.id, null, inbox?.id);
       }}
     >
       <div className="flex-1">

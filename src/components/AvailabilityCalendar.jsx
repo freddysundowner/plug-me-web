@@ -20,12 +20,13 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
   const [quote, setQuote] = useState(null);
   const [counterOffers, setCounterOffers] = useState([]);
   const [finalQuote, setFinalQuote] = useState(null);
+  const [customPrice, showCustomPrice] = useState(false);
 
   const { openDrawer, closeDrawer } = useContext(DrawerContext);
   const handleDateChange = (newDate) => {
     setDate(newDate);
-    setSelectedSlot(null); // Reset selected slot when date changes
-    setQuote(null); // Reset quote when date changes
+    setSelectedSlot(null);
+    setQuote(null);
     setFinalQuote(null);
   };
 
@@ -89,6 +90,7 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
           username: currentProvider.username,
           photoURL: currentProvider?.photoURL ?? null,
         },
+        user: currentProvider.id,
         receiver: {
           id: provider.id,
           username: provider.username,
@@ -102,13 +104,14 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
           value: selectedService.label,
           price: selectedService.price,
           priceType: selectedService.priceType,
-        }, 
-        type: "request",
+        },
+        type: "quote",
         status: "pending",
         slot: selectedSlot,
         provider: provider?.id,
-        quote: finalQuote ? finalQuote : 0,
+        quote: finalQuote,
         date: date,
+        paid: false
       };
       addMessage(bookingMessage);
       openDrawer("chatDrawer", provider);
@@ -122,15 +125,12 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
 
     const dayName = date.toLocaleString("default", { weekday: "long" });
     const dateString = date.toISOString().split("T")[0];
-    const dateOfMonth = date.getDate();
 
-    // Check weekly availability
     const weeklyAvailability = selectedService.availability.find(
       (week) => week.day === dayName
     );
     if (weeklyAvailability) return weeklyAvailability.slots;
 
-    // Check specific date availability
     const specificDateAvailability = selectedService.availability.find(
       (spec) => spec.date === dateString
     );
@@ -263,30 +263,53 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
           <p className="text-gray-600">No available slots for this date.</p>
         )}
       </div>
-      {quote && (
+      {quote ?
         <div className="mb-4">
           <h3
             className="text-lg font-semibold mb-2"
             style={{ color: primaryColor }}
           >
-            Select on Offer(Optional):
+            Select an Offer (Optional):
           </h3>
-          <ul className="flex flex-wrap gap-2">
-            {counterOffers.map((offer, index) => (
-              <li
-                key={index}
-                onClick={() => handleCounterOfferSelect(offer)}
-                className={`px-4 py-2 border rounded cursor-pointer ${finalQuote === parseFloat(offer)
-                  ? `bg-primary text-white`
-                  : `bg-white text-black border-primary`
-                  }`}
-              >
-                ${offer}
-              </li>
-            ))}
-          </ul>
         </div>
-      )}
+        : ""}
+      {selectedSlot?.cost ? <ul className="flex flex-wrap gap-2 mb-2">
+        <li
+          onClick={() => {
+            showCustomPrice(false);
+            handleCounterOfferSelect(selectedSlot?.cost)
+          }}
+          className={`px-4 py-2 border rounded cursor-pointer ${finalQuote === parseFloat(selectedSlot?.cost) && customPrice == false
+            ? `bg-primary text-white`
+            : `bg-white text-black border-primary`
+            }`}
+        >
+          ${selectedSlot?.cost}
+        </li>
+        <li
+          onClick={() => showCustomPrice(true)}
+          className={`px-4 py-2 border rounded cursor-pointer ${customPrice == true
+            ? `bg-primary text-white`
+            : `bg-white text-black border-primary`
+            }`
+          }
+        >
+          Counter Offer
+        </li>
+        {customPrice == true && <li>
+          <div className="flex items-center  border rounded ml-2">
+            <span className="py-1 px-4 bg-gray-200">$</span>
+            <input
+              type="number"
+              className="px-2 py-1"
+              placeholder="Cost"
+              onChange={(e) => {
+                handleCounterOfferSelect(e.target.value)
+              }}
+            />
+          </div>
+        </li>}
+      </ul> : ""}
       <button
         onClick={handleBooking}
         disabled={!selectedSlot || !selectedService}

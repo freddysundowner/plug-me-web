@@ -6,3 +6,16 @@ export const dateFormat = (date) => {
   const formattedDate = `${day}/${month}/${year}`;
   return formattedDate;
 };
+export const CurrencyFormatter = ({ amount, locale = 'en-US', currency = 'USD' }) => {
+  const floatAmount = parseFloat(amount);
+  if (isNaN(floatAmount)) {
+    return <span>Invalid amount</span>;
+  }
+  const formattedAmount = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: currency,
+  }).format(floatAmount);
+
+  return <span>{formattedAmount}</span>;
+};
+

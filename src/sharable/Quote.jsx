@@ -41,6 +41,7 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
     setDuration(quotemessage?.duration);
     setDurationUnit(quotemessage?.durationUnit);
   }, [quotemessage]);
+  console.log(quotemessage);
   useEffect(() => {
     setQuoteMessage({
       ...quotemessage,
@@ -112,13 +113,6 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
                 onChange={(time, timeString) => {
                   const newSlots = [...currentAvailability[index].slots];
                   newSlots[slotIndex].from = timeString;
-                  setCurrentAvailability({
-                    ...currentAvailability,
-                    [index]: {
-                      ...currentAvailability[index],
-                      slots: newSlots,
-                    },
-                  });
                 }}
               />
               <span className="mx-2">to</span>
@@ -131,13 +125,6 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
                 onChange={(time, timeString) => {
                   const newSlots = [...currentAvailability[index].slots];
                   newSlots[slotIndex].to = timeString;
-                  setCurrentAvailability({
-                    ...currentAvailability,
-                    [index]: {
-                      ...currentAvailability[index],
-                      slots: newSlots,
-                    },
-                  });
                 }}
               />
               <button
@@ -179,14 +166,15 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
         <div className="flex justify-end">
           <Button
             callback={() => {
-              if (quotemessage?.type == "quote") {
+              if (quotemessage?.type == "request") {
+                setQuoteMessage({ ...quotemessage, quote: quotemessage.quote })
                 handleSendQuote("update");
               } else {
                 handleSendQuote();
               }
             }}
             loading={loading}
-            text={quotemessage?.type == "quote" ? "Update Quote" : "Send Quote"}
+            text={quotemessage?.type == "request" ? "Confirm Quote" : "Send Quote"}
           />
         </div>
       </div>

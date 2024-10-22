@@ -16,12 +16,12 @@ function Menu({ provider }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMyAccountOpen, setIsMyAccountOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [taskBoardOpen, setIsTaskBoardOpen] = useState(false);
 
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const { currentUser } = useAuth();
   const { openDrawer, closeDrawer } = useContext(DrawerContext);
-  const { setInbox } = useContext(ChatContext);
+  const { setInbox,
+    setIsTaskBoardOpen, taskBoardOpen } = useContext(ChatContext);
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
   );

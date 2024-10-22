@@ -24,6 +24,7 @@ export const fetchServices = async () => {
   return servicesList;
 };
 export const updateProviderAvailability = async (userId, services) => {
+  console.log(userId, services);
   const userDocRef = doc(db, "users", userId);
   await updateDoc(userDocRef, { services });
 };
@@ -42,9 +43,9 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRadians(lat2)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c; // Distance in kilometers
 };
@@ -112,6 +113,121 @@ export const getThreadId = async (currentUserId, recipientUserId) => {
     return null;
   }
 };
+export const addInvoice = async (provider, invoiceData) => {
+  updateProviderData(provider, { "currentInvoice": { id: invoiceData.invoiceId, threadId: invoiceData.threadId } })
+  updateProviderData(invoiceData?.client, { "currentInvoice": { id: invoiceData.invoiceId, threadId: invoiceData.threadId } })
+
+}
+
+export const getTransactionThreadId = async (currentUserId, recipientUserId) => {
+  try {
+    const inboxRef = collection(db, "transactions");
+    const q = query(inboxRef, where("users", "array-contains", currentUserId));
+
+    const querySnapshot = await getDocs(q);
+    let threadId = null;
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.users.includes(recipientUserId)) {
+        threadId = doc.id;
+      }
+    });
+
+    return threadId;
+  } catch (error) {
+    console.error("Error checking for existing thread:", error);
+    return null;
+  }
+};
+export const addPayment = async (transaction) => {
+  try {
+    let threadId = await getTransactionThreadId(
+      transaction?.sender?.id,
+      transaction?.receiver?.id
+    );
+
+    let threadRef = null;
+
+    if (threadId) {
+      threadRef = doc(db, "transactions", threadId);
+      await addDoc(collection(threadRef, "payments"), {
+        ...transaction,
+        threadId,
+      });
+      await updateDoc(threadRef, { ...transaction, threadId });
+    } else {
+      threadId = Date.now().toString();
+      threadRef = doc(collection(db, "transactions"), threadId);
+      await setDoc(
+        threadRef,
+        { ...transaction, threadId },
+        { merge: true }
+      );
+      await addDoc(collection(threadRef, "payments"), {
+        ...transaction,
+        threadId,
+      });
+    }
+  } catch (error) {
+    console.error("Error adding message to Firestore:", error);
+  }
+}
+export const getInvoice = async (userId) => {
+  const inboxQuery = query(
+    collection(db, "inbox"),
+    where("users", "array-contains", userId)
+  );
+
+  const inboxSnapshot = await getDocs(inboxQuery);
+
+  const allMessages = [];
+
+  for (const inboxDoc of inboxSnapshot.docs) {
+    const messagesQuery = query(
+      collection(db, `inbox/${inboxDoc.id}/messages`),
+      where("type", "==", 'quote'),
+      orderBy("timestamp", "desc")
+    );
+
+    const messagesSnapshot = await getDocs(messagesQuery);
+    const messages = messagesSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    allMessages.push(...messages);
+  }
+
+  console.log(allMessages);
+  return allMessages;
+}
+export const getTransactions = async (userId) => {
+  const inboxQuery = query(
+    collection(db, "transactions"),
+    where("users", "array-contains", userId)
+  );
+
+  const transactionSnapshot = await getDocs(inboxQuery);
+
+  const allTransactions = [];
+
+  for (const transDoc of transactionSnapshot.docs) {
+    const messagesQuery = query(
+      collection(db, `transactions/${transDoc.id}/payments`),
+      orderBy("timestamp", "desc")
+    );
+
+    const transactionsSnapshot = await getDocs(messagesQuery);
+    const transactions = transactionsSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    allTransactions.push(...transactions);
+  }
+
+  console.log(allTransactions);
+  return allTransactions;
+}
 export const addMessageToFirestore = async (message) => {
   try {
     let threadId = await getThreadId(
@@ -157,7 +273,20 @@ export const addMessageToFirestore = async (message) => {
     console.error("Error adding message to Firestore:", error);
   }
 };
-
+export const listenForUserAccountChanges = (userId, callback) => {
+  const userDocRef = doc(db, "users", userId);
+  // Step 2: Set up a real-time listener for the user's document
+  const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
+    if (docSnapshot.exists()) {
+      const userData = docSnapshot.data();
+      console.log("User data:", userData);
+      callback(userData);
+    } else {
+      console.log("No such document!");
+    }
+  });
+  return () => unsubscribe();
+};
 export const getInboxMessages = (currentUser, callback) => {
   const q = query(
     collection(db, "inbox"),

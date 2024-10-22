@@ -1,7 +1,6 @@
 import { useContext, useState } from "react";
 import { FaCheck, FaEye, FaTimesCircle } from "react-icons/fa";
 import { timeAgo } from "../utils/timeAgo";
-import jsPDF from "jspdf";
 import Modal from "react-modal";
 import "jspdf-autotable";
 import { useSelector } from "react-redux";
@@ -18,62 +17,19 @@ const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
     handleSendQuote,
     setQuoteAlert,
     quoteAlertType,
-    setQuoteAlertType,
+    setQuoteAlertType, generatePDF, pdfData, modalIsOpen, setModalIsOpen, generateReceipePDF
   } = useContext(ChatContext);
 
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-  const [pdfData, setPdfData] = useState(null);
-  const generatePDF = () => {
-    const newQuote = message;
-    const doc = new jsPDF();
 
-    // Add title and other details
-    doc.setFontSize(18);
-    doc.text("Quotation", 105, 20, null, null, "center");
-
-    doc.setFontSize(12);
-    doc.text(`Date: ${newQuote.date}`, 14, 40);
-    doc.text(`From: ${newQuote?.slot?.from}`, 14, 50);
-    doc.text(`To: ${newQuote?.slot?.to}`, 14, 60);
-
-    // Add quotation details in a table
-    const quoteData = [
-      ["Description", "Value"],
-      ["Service", newQuote.service.value],
-      ["Price", `$${newQuote.quote}`],
-    ];
-
-    doc.autoTable({
-      startY: 70,
-      head: [quoteData[0]],
-      body: quoteData.slice(1),
-      styles: { fontSize: 10, halign: "center", valign: "middle" },
-      theme: "striped",
-    });
-
-    // Add message
-    doc.text("Message:", 14, doc.autoTable.previous.finalY + 20);
-    doc.text(
-      "Thank you for showing interest in our service.",
-      14,
-      doc.autoTable.previous.finalY + 30,
-      { maxWidth: 180 }
-    );
-
-    const pdfBlob = doc.output("blob");
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    setPdfData(pdfUrl);
-    setModalIsOpen(true);
-  };
   return (
     <div
-      className={`flex ${
-        message.sender?.id === provider.id ? "justify-end" : "justify-start"
-      }`}
+      className={`flex ${message.sender?.id === provider.id ? "justify-end" : "justify-start"
+        }`}
     >
       <Modal
         isOpen={modalIsOpen}
         onRequestClose={() => setModalIsOpen(false)}
+        ariaHideApp={false}
         style={{
           overlay: { zIndex: 1000 },
           content: {
@@ -96,32 +52,62 @@ const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
         </button>
       </Modal>
       <div
-        className={`p-2 my-2 rounded-md ${
-          message.type === "request"
-            ? "bg-yellow-300 text-black"
-            : message.type == "info"
+        className={`p-2 my-2 rounded-md ${message.type === "request"
+          ? "bg-yellow-300 text-black"
+          : message.type == "info"
             ? "bg-red-300"
             : message.sender?.id === provider.id
-            ? "bg-blue-500 text-white"
-            : "bg-gray-200 text-black"
-        }`}
+              ? "bg-blue-500 text-white"
+              : "bg-gray-200 text-black"
+          }`}
       >
         <p>{generateQuoteMsgs(message, currentProvider?.id)}</p>
 
-        {message.type === "quote" && message.status === "pending" ? (
+        {message.type === "quote" ? (
           <div className="flex mt-2 gap-4">
-            <button
+            {message.status === "completed" && (<button
               onClick={() => {
-                generatePDF();
-              }}
+                if (message.paid == true) {
+                  generateReceipePDF("Receipt", message.threadId)
+                } else {
+                  generatePDF(message.status == 'accepted' ? "Invoice" : "Quotation", message.threadId);
+
+                }
+              }
+              }
               className="px-4 py-2 bg-black text-white rounded-md"
             >
               <div className="flex gap-2 items-center">
                 <FaEye />
-                <p>View Quotation</p>
+                {
+                  message?.paid == true ?
+                    <p>View Receipt</p> :
+                    <p>View {message.status == 'accepted' ? "Invoice" : "Quotation"}</p>
+                }
               </div>
-            </button>
-            {message.provider !== currentProvider.id && (
+            </button>)}
+            {message.provider == currentProvider.id && message.status === "pending" && (<button
+              onClick={() => {
+                if (message.paid == true) {
+                  generateReceipePDF("Receipt", message.threadId)
+                } else {
+                  generatePDF(message.status == 'accepted' ? "Invoice" : "Quotation", message.threadId);
+
+                }
+              }
+              }
+              className="px-4 py-2 bg-black text-white rounded-md"
+            >
+              <div className="flex gap-2 items-center">
+                <FaEye />
+                {
+                  message?.paid == true ?
+                    <p>View Receipt</p> :
+                    <p>View {message.status == 'accepted' ? "Invoice" : "Quotation"}</p>
+                }
+              </div>
+            </button>)}
+            {message.provider == currentProvider.id && message.status === "pending" && (
               <button
                 onClick={() => {
                   setQuoteMessage(message);
@@ -136,7 +122,7 @@ const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
                 </div>
               </button>
             )}
-            {message.provider !== currentProvider.id && (
+            {message.provider == currentProvider.id && message.status === "pending" && (
               <Button
                 callback={() => {
                   setQuoteMessage({ ...message, rejectBy: currentProvider.id });
@@ -148,7 +134,7 @@ const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
                 icon={<FaTimesCircle />}
               />
             )}
-            {message.provider === currentProvider.id && (
+            {/* {message.provider === currentProvider.id && message.status === "pending" && (
               <Button
                 callback={() => {
                   setQuoteMessage(message);
@@ -159,8 +145,8 @@ const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
                 background="bg-red-500"
                 icon={<FaTimesCircle />}
               />
-            )}
-            {message.provider === currentProvider.id && (
+            )} */}
+            {/* {message.provider === currentProvider.id && message.status === "pending" && (
               <button
                 onClick={() => {
                   setQuoteMessage(message);
@@ -173,7 +159,7 @@ const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
                   <p>Edit Quote</p>
                 </div>
               </button>
-            )}
+            )} */}
           </div>
         ) : (
           ""
@@ -187,14 +173,18 @@ const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
             <div className="flex mt-2">
               <button
                 onClick={() => {
+                  // setQuoteMessage(message);
+                  // setShowQuotePopup(true);
+
                   setQuoteMessage(message);
-                  setShowQuotePopup(true);
+                  setQuoteAlert(true);
+                  setQuoteAlertType("accept");
                 }}
-                className="px-4 py-2 bg-green-500 text-white rounded-md mr-4"
+                className="px-4 py-2 bg-blue-500 text-white rounded-md mr-4"
               >
                 <div className="flex gap-2 items-center">
                   <FaCheck />
-                  <p>Send Quote</p>
+                  <p>Accept Offer</p>
                 </div>
               </button>
 

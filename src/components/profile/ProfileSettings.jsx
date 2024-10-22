@@ -28,12 +28,11 @@ const daysOptions = [
 const ProfileSettings = () => {
   const dispatch = useDispatch();
   const provider = useSelector((state) => state.provider.currentProvider);
-  console.log(provider);
   
   const [formData, setFormData] = useState(provider);
   const [servicesOptions, setServicesOptions] = useState([]);
   const [currentAvailability, setCurrentAvailability] = useState(
-    formData.services.map(() => ({ day: "", slots: [{ from: "", to: "" }] }))
+    formData.services?.map(() => ({ day: "", slots: [{ from: "", to: "" }] }))
   );  
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,7 +56,6 @@ const ProfileSettings = () => {
     if (place && place.value && place.value.place_id) {
       const location = await getPlaceDetails(place.value.place_id);
       handleChange("location", place?.label);
-      console.log(new GeoPoint(location.lat, location.lng));
       handleChange("geopoint", new GeoPoint(location.lat, location.lng));
     } else {
       handleChange("location", { lat: null, lng: null });
@@ -78,20 +76,19 @@ const ProfileSettings = () => {
 
   const handleSaveChanges = async () => {
     setSaving(true);
-    const userId = provider.id; // Assuming provider object has the user's id
-    console.log(userId, formData);
+    const userId = provider.id; 
     await updateProviderData(userId, formData);
     setSaving(false);
   };
 
   const handleSaveAvailability = async (serviceIndex) => {
     setLoading(true);
-    const newServices = JSON.parse(JSON.stringify(formData.services)); // Deep clone the services array
+    const newServices = JSON.parse(JSON.stringify(formData.services)); 
     newServices[serviceIndex].availability.push({
       ...currentAvailability[serviceIndex],
     });
 
-    const userId = provider.id; // Assuming provider object has the user's id
+    const userId = provider.id; 
     await updateProviderAvailability(userId, newServices);
     setLoading(false);
 
@@ -118,11 +115,19 @@ const ProfileSettings = () => {
   };
 
   const handleRemoveAvailability = (serviceIndex, availIndex) => {
-    const newServices = [...formData.services];
-    newServices[serviceIndex].availability = newServices[
-      serviceIndex
-    ].availability.filter((_, i) => i !== availIndex);
-    setFormData({ ...formData, services: newServices });
+    const newServices = formData.services.map((service, index) => {
+      if (index === serviceIndex) {
+        return {
+          ...service,  // Clone the service object
+          availability: service.availability.filter((_, i) => i !== availIndex), // Filter out the availability
+        };
+      }
+      return service;  // Return other services unchanged
+    });
+    setFormData((prevState) => ({
+      ...prevState,
+      services: newServices,
+    }));
   };
 
   const handleSubmit = (event) => {
@@ -184,7 +189,7 @@ const ProfileSettings = () => {
                       <span>
                         {avail.day}:{" "}
                         {avail.slots
-                          .map((slot) => `${slot.from} - ${slot.to}`)
+                          .map((slot) => `${slot.from} - ${slot.to} $${slot.cost}`)
                           .join(", ")}
                       </span>
                       <button
@@ -202,31 +207,37 @@ const ProfileSettings = () => {
               </div>
             )}
             <div className="mt-4">
-              <Select
-                value={daysOptions.find(
-                  (option) =>
-                    option.value === currentAvailability[serviceIndex].day
-                )}
-                onChange={(option) => {
-                  const newAvailability = [...currentAvailability];
-                  newAvailability[serviceIndex].day = option.value;
-                  setCurrentAvailability(newAvailability);
-                }}
-                options={daysOptions.filter(
-                  (option) =>
-                    !service.availability.some(
-                      (avail) => avail.day === option.value
-                    )
-                )}
-                className="mt-1"
-              />
-              <button
-                type="button"
-                className="bg-primary text-white px-4 py-2 rounded mt-2"
-                onClick={() => handleAddTimeslot(serviceIndex)}
-              >
-                Add Timeslot
-              </button>
+              <h2>Set Availability</h2>
+              <div className="flex flex-row gap-2">
+                <div className="w-[80%]">
+                  <Select
+                    value={daysOptions.find(
+                      (option) =>
+                        option.value === currentAvailability[serviceIndex].day
+                    )}
+                    onChange={(option) => {
+                      const newAvailability = [...currentAvailability];
+                      newAvailability[serviceIndex].day = option.value;
+                      setCurrentAvailability(newAvailability);
+                    }}
+                    options={daysOptions.filter(
+                      (option) =>
+                        !service.availability.some(
+                          (avail) => avail.day === option.value
+                        )
+                    )}
+                  />
+                </div>
+                <div className="">
+                  <button
+                    type="button"
+                    className="bg-primary text-white px-2 py-2 rounded"
+                    onClick={() => handleAddTimeslot(serviceIndex)}
+                  >
+                    Timeslot +
+                  </button>
+                </div>
+              </div>
               {currentAvailability[serviceIndex].day && (
                 <div className="mt-2">
                   {currentAvailability[serviceIndex].slots.map(
@@ -265,6 +276,22 @@ const ProfileSettings = () => {
                             setCurrentAvailability(newAvailability);
                           }}
                         />
+                        <div className="flex items-center  border rounded ml-2">
+                          <span className="py-1 px-4 bg-gray-200">$</span>
+                          <input
+                            type="number"
+                            className="px-2 py-1"
+                            placeholder="Cost"
+                            value={slot.cost || ""}
+                            onChange={(e) => {
+                              const newSlots = [...currentAvailability[serviceIndex].slots];
+                              newSlots[index].cost = e.target.value;
+                              const newAvailability = [...currentAvailability];
+                              newAvailability[serviceIndex].slots = newSlots;
+                              setCurrentAvailability(newAvailability);
+                            }}
+                          />
+                        </div>
                         <button
                           type="button"
                           className="bg-red-500 text-white px-2 py-1 rounded ml-2"
@@ -291,10 +318,6 @@ const ProfileSettings = () => {
                       type="button"
                       className="bg-primary text-white px-4 py-2 rounded mt-2"
                       onClick={() => handleSaveAvailability(serviceIndex)}
-                      disabled={
-                        !currentAvailability[serviceIndex].slots[0]?.from ||
-                        !currentAvailability[serviceIndex].slots[0]?.to
-                      }
                     >
                       Save Availability
                     </button>
