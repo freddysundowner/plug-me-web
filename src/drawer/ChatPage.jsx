@@ -5,9 +5,10 @@ import ChatContext from "../context/ChatContext"; // Import ChatContext
 import Quote from "../sharable/Quote";
 import Message from "../cards/Message";
 import { useSelector } from "react-redux";
-import { getAllMessages, listenForUserAccountChanges } from "../services/firebaseService";
+import { getAllMessages, listenForUserAccountChanges, updateTransactionInFirestore, updateProviderData } from "../services/firebaseService";
 import Button from "../sharable/Button";
-
+import PaymentDrawer from './stripePayment';
+import { increment } from "firebase/firestore";
 const ChatPage = ({ provider, isOpen, onClose, thread }) => {
   const {
     messages,
@@ -18,13 +19,15 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
     setQuoteMessage,
     setMessages,
     quoteAlert,
-    setQuoteAlert, generatePDF, payInvoice,invoicePaid
+    setQuoteAlert, generatePDF, payInvoice
   } = useContext(ChatContext);
+
   const [input, setInput] = useState("");
   const [showNewMessageBubble, setShowNewMessageBubble] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
-  const [activeInvoice, setActiveInvoice] = useState(false)
+  const [activeInvoice, setActiveInvoice] = useState(null)
   const [type, setType] = useState("");
+  const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
   );
@@ -67,6 +70,8 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+
+
   const handleScroll = () => {
     // if (messagesContainerRef.current) {
     //   const { scrollTop, scrollHeight, clientHeight } =
@@ -107,12 +112,28 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
   useEffect(() => {
     if (currentProvider?.id) {
       listenForUserAccountChanges(currentProvider.id, (user) => {
-        console.log("user ", user);
         setActiveInvoice(user.currentInvoice)
       });
     }
   }, [currentProvider]);
 
+  const handleOpenPaymentDrawer = () => {
+    setShowPaymentDrawer(true);
+  };
+
+  const handleClosePaymentDrawer = () => {
+    setShowPaymentDrawer(false);
+  };
+  const handleReaseEscrol = () => {
+    updateProviderData(currentProvider.id, {
+      currentInvoice: null,
+    });
+    updateProviderData(provider?.id, {
+      currentInvoice: null,
+      balance: increment(activeInvoice?.amount)
+    });
+    updateTransactionInFirestore(activeInvoice?.threadId, activeInvoice?.id, { "status": "completed" })
+  }
   return (
     <Drawer
       title={`${provider?.username}`}
@@ -134,12 +155,16 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
                   }}
                   text="View Pending Invoice"
                 />
-                {currentProvider.isProvider == false ? <Button
-                  callback={() => {
-                    payInvoice(thread??activeInvoice.threadId);
-                  }}
-                  text="Pay"
-                /> : <></>}
+                {currentProvider.isProvider == false && activeInvoice?.paid == null ?
+                  <Button
+                    callback={handleOpenPaymentDrawer}
+                    text="Deposit Escrol"
+                  /> : <></>}
+                {currentProvider.isProvider == false && activeInvoice?.released == false ?
+                  <Button
+                    callback={handleReaseEscrol}
+                    text="Release Escrol"
+                  /> : <></>}
               </div>
             ) :
 
@@ -150,7 +175,7 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
               //   text={"Submit a Quote"}
               // />
               //   :
-                <></>
+              <></>
           }
 
         </div>
@@ -228,6 +253,15 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
         type={type}
         setOpenModal={setQuoteAlert}
       />
+
+
+      {activeInvoice && <PaymentDrawer
+        isOpen={showPaymentDrawer}
+        onClose={handleClosePaymentDrawer}
+        threadId={thread?.id ?? activeInvoice.threadId}
+        payInvoice={payInvoice}
+      />}
+
     </Drawer>
   );
 };

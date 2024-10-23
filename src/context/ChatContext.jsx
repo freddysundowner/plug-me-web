@@ -12,6 +12,8 @@ import {
 } from "../redux/features/providerSlice";
 import { useDispatch } from "react-redux";
 import { increment } from "firebase/firestore";
+import apiClient, { stripeIntent } from "../services/httpClient";
+import { CardElement } from '@stripe/react-stripe-js';
 
 const ChatContext = createContext();
 
@@ -143,39 +145,82 @@ export const ChatProvider = ({ children }) => {
     setPdfData(pdfUrl);
     setModalIsOpen(true);
   };
-  const payInvoice = (threadId) => {
-    const invoiceRes = messages.filter((msg) => String(msg?.threadId) === String(threadId) && msg?.type == 'quote' && msg.paid == false);
-    console.log(invoiceRes);
-    if (invoiceRes.length > 0) {
-      let invoice = invoiceRes[0]
-      if (invoice.paid == false) {
-        let payload = {
+  const payInvoice = async (threadId) => {
+    const invoiceRes = messages.filter(
+      (msg) => String(msg?.threadId) === String(threadId) && msg?.type === 'quote' && msg?.paid === false
+    );
+
+    if (invoiceRes.length === 0) return; 
+
+    const invoice = invoiceRes[0];
+    const amount = invoice?.quote;
+
+    try {
+        const payload = {
           paid: true,
           paidDate: new Date(),
           paidBy: currentProvider?.id,
-          paidVia: "stripe",
-          status: "completed"
-        }
+          paidVia: 'stripe',
+          status: 'completed',
+        };
+
         updateMessageInFirestore(threadId, invoice.id, payload);
-        let transaction = {
-          "amount": invoice.quote,
+
+        //save payment
+        const transaction = {
+          amount: amount * 0.90,
           timestamp: Date.now(),
-          "sender": {
+          sender: {
             id: currentProvider?.id,
-            name: currentProvider.username
+            name: currentProvider?.username,
           },
-          "paymentMethod": "stripe",
-          "type": "payment",
-          "receiver": invoice.receiver.id == invoice.provider ? invoice.receiver : invoice.sender,
+          paymentMethod: 'stripe',
+          status: "pending",
+          type: 'payment',
+          receiver: invoice.receiver.id === invoice.provider ? invoice.receiver : invoice.sender,
           date: new Date(),
-          "users": [invoice?.provider, invoice.user]
-        }
-        addPayment(transaction)
-        updateProviderData(invoice?.sender?.id, { currentInvoice: null})
-        updateProviderData(invoice?.receiver?.id, { currentInvoice: null, balance: increment(invoice.quote) })
-      }
+          users: [invoice?.provider, invoice.user],
+        };
+        addPayment(transaction);
+
+        //save commission
+
+
+        // const transactionCommission = {
+        //   amount: amount * 0.10,
+        //   timestamp: Date.now(),
+        //   sender: {
+        //     id: currentProvider?.id,
+        //     name: currentProvider?.username,
+        //   },
+        //   paymentMethod: 'stripe',
+        //   type: 'commission',
+        //   receiver: invoice.receiver.id === invoice.provider ? invoice.receiver : invoice.sender,
+        //   date: new Date(),
+        //   users: [invoice?.provider],
+        // };
+        // addPayment(transactionCommission);
+
+        updateProviderData(invoice?.sender?.id, {
+          "currentInvoice.paid": true,
+          "currentInvoice.released": false,
+          "currentInvoice.amount": amount,
+        });
+        updateProviderData(invoice?.receiver?.id, {
+          "currentInvoice.paid": true,
+          "currentInvoice.released": false,
+          "currentInvoice.amount": amount,
+        });
+
+        console.log('Payment successful and invoice marked as paid!');
+        return { success: true };
+      // }
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      return { success: false, error: 'Payment processing failed' };
     }
-  }
+  };
+
   const handleSendQuote = async (type) => {
     console.log(quotemessage);
     if (quotemessage.quote <= 0) {

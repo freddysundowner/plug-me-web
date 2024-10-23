@@ -197,10 +197,12 @@ export const getInvoice = async (userId) => {
     }));
     allMessages.push(...messages);
   }
-
-  console.log(allMessages);
   return allMessages;
 }
+export const updateTransactionInFirestore = async (threadId, messageId, data) => {
+  const messageDocRef = doc(db, "transactions", threadId, "payments", messageId);
+  await updateDoc(messageDocRef, data);
+};
 export const getTransactions = async (userId) => {
   const inboxQuery = query(
     collection(db, "transactions"),
@@ -224,8 +226,6 @@ export const getTransactions = async (userId) => {
     }));
     allTransactions.push(...transactions);
   }
-
-  console.log(allTransactions);
   return allTransactions;
 }
 export const addMessageToFirestore = async (message) => {
@@ -279,7 +279,6 @@ export const listenForUserAccountChanges = (userId, callback) => {
   const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
     if (docSnapshot.exists()) {
       const userData = docSnapshot.data();
-      console.log("User data:", userData);
       callback(userData);
     } else {
       console.log("No such document!");

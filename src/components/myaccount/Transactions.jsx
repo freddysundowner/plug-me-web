@@ -11,7 +11,6 @@ const Transactions = () => {
   );
   useEffect(() => {
     getTransactions(currentProvider?.id).then((transactions) => {
-      console.log("transactions ", transactions);
       setTransactions(transactions)
     })
   }, [])
@@ -24,7 +23,7 @@ const Transactions = () => {
           <thead className="bg-gray-100">
             <tr>
               <th className="py-2 px-3 text-left">Date</th>
-              <th className="py-2 px-3 text-left">Type</th>
+              <th className="py-2 px-3 text-left">Status</th>
               <th className="py-2 px-3 text-left">From</th>
               <th className="py-2 px-3 text-left">Amount</th>
               <th className="py-2 px-3 text-left">Ref ID</th>
@@ -32,12 +31,15 @@ const Transactions = () => {
           </thead>
           <tbody>
             {transactions.map((transaction, index) => (
-              <tr key={index} className="border-t">
-                <td className="py-2 px-3">{dateFormat(transaction.date.seconds * 1000)}</td>
-                <td className="py-2 px-3">{transaction.type}</td>
-                <td className="py-2 px-3">{transaction.sender?.name}</td>
-                <td className="py-2 px-3"><CurrencyFormatter amount={transaction.amount} /></td>
-                <td className="py-2 px-3 text-green-500">
+              <tr key={index} className={`border-t `}>
+                <td className="py-2 px-3">
+                  {dateFormat(transaction.date.seconds * 1000)}
+                </td>
+                <td className={`py-2 px-3 ${transaction.status == 'pending' ? 'text-yellow-600' : ''} ${transaction?.type == "withdraw" ? "text-red-500" : ""} ${transaction?.type == "commission" ? "text-yellow-500" : ""}`}>       <p>{transaction.status}</p><span className="text-sm">{transaction.type}</span>
+                </td>
+                <td className="py-2 px-3">{transaction?.type == "withdraw" ? transaction?.paymentMethod : transaction.sender?.name}</td>
+                <td className={`py-2 px-3 ${transaction?.type == "withdraw" ? "text-red-500" : ""} ${transaction?.type == "commission" ? "text-yellow-500" : ""}`}><CurrencyFormatter amount={transaction.amount} /></td>
+                <td className="py-2">
                   {transaction.id.slice(0, 7)}
                 </td>
               </tr>

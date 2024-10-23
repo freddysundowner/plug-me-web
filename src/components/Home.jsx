@@ -19,6 +19,8 @@ import Switch from "../sharable/Switch";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import LoginSignupDrawer from "../drawer/LoginSignupDrawer";
 const libraries = ["places"];
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import {
   setProvider,
   clearProvider,
@@ -30,7 +32,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import ProviderFormDrawer from "../drawer/ProviderFormDrawer";
 import NavBar from "./navbar";
 import {
-  getProviders, listenForUserAccountChanges
+  getProviders
 } from "../services/firebaseService";
 import { LoadingProvider } from "../context/LoadingContext";
 
@@ -89,6 +91,7 @@ const useGeolocation = (defaultCenter, defaultZoom) => {
 
   return { mapCenter, zoomLevel };
 };
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const Home = () => {
   const dispatch = useDispatch();
@@ -179,14 +182,14 @@ const Home = () => {
       )}
 
       {drawerState.chatDrawer.isOpen && (
-        <ChatPage
+        <Elements stripe={stripePromise}><ChatPage
           provider={drawerState.chatDrawer.selectedProvider}
           thread={drawerState.chatDrawer.thread}
           isOpen={drawerState.chatDrawer.isOpen}
           onClose={() => closeDrawer("chatDrawer")}
           messages={messages}
           addMessage={handleNewMessage}
-        />
+        /></Elements>
       )}
       {drawerState.loginDrawer.isOpen && (
         <LoginSignupDrawer

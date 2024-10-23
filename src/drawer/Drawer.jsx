@@ -12,6 +12,7 @@ const Drawer = ({
   subText = "",
   actionButton,
   showheader = true,
+  showIcon = false
 }) => {
   // Default width to 2/5
   if (!isOpen) return null;
@@ -24,10 +25,10 @@ const Drawer = ({
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
           {showheader ? (
             <div className="flex items-center gap-6">
-              <FaUserCircle className="text-gray-400 text-5xl" />
+              {showIcon && <FaUserCircle className="text-gray-400 text-5xl" />}
               <div>
                 <h2 className="text-xl font-semibold">{title}</h2>
-                {subText && <p className="text-sm font-thin">{subText}</p>}
+                {subText && <p className="text-sm font-thin py-1">{subText}</p>}
               </div>
             </div>
           ) : (

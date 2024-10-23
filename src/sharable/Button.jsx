@@ -20,7 +20,7 @@ const Button = ({ callback, text, background = "bg-green-500", icon }) => {
           onClick={callback}
           className={` ${background} text-white px-4 py-2 rounded`}
         >
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center text-center justify-center">
             {icon}
             {text}
           </div>
