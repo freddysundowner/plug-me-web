@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   FaUserCircle,
   FaMapMarkerAlt,
@@ -8,22 +8,43 @@ import {
   FaStar,
   FaRocketchat,
 } from "react-icons/fa";
+import { MdVerified } from "react-icons/md";
+
 import AvailabilityCalendar from "../components/AvailabilityCalendar";
 import Drawer from "./Drawer";
 import DrawerContext from "../context/DrawerContext";
-import ChatContext from "../context/ChatContext"; // Import ChatContext for managing messages
 import Socialicons from "../sharable/Socialicons";
 import WorkHistory from "../sharable/WorkHistory";
 import Rating from "../sharable/Rating";
 import { useAuth } from "../context/AuthContext";
+import { CurrencyFormatter } from "../utils/dateFormat";
+import { getInvoice, getUserRatings } from "../services/firebaseService";
+import PaginatedReviews from "../components/PaginatedReviews";
 
 const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
   if (!isOpen) return null;
-  const [showBooking, setShowBooking] = useState(false);
-  const { openDrawer, closeDrawer } = useContext(DrawerContext);
-  const { currentUser } = useAuth();
+  const [showBooking, setShowBooking] = useState(true);
+  const [reviews, setReviews] = useState([]);
+  const [tasks, setTasks] = useState([]);
 
+  useEffect(() => {
+    getUserRatings(provider.id).then((ratings) => {
+      if (ratings) {
+        setReviews(ratings);
+      }
+    });
+    getInvoice(provider?.id).then((invoices) => {
+      console.log(invoices);
+      
+      setTasks(invoices);
+    });
+  }, [provider]);
+  
 
+  const averageRating =
+    provider.ratingsCount > 0
+      ? Math.round(provider.totalRatings / provider.ratingsCount)
+      : 0;
   return (
     <Drawer
       title={provider.username}
@@ -32,8 +53,8 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
       width="2xl:w-2/3 xl:w-1/2 2xl:w-1/2 3xl:w-1/2 h-full lg:w-2/3 md:w-2/3 sm:w-full"
       showheader={false}
     >
-      <div className="flex flex-col mb-16">
-        <div className="flex justify-evenly items-center py-4 border-b border-gray-200">
+      <div className="flex flex-col mb-16 justify-evenly">
+        <div className="flex items-center py-4 border-b border-gray-200 justify-between">
           {provider.image ? (
             <div>
               <img
@@ -44,38 +65,74 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
               <Rating rating={provider.rating} />
             </div>
           ) : (
-            <div className="flex items-center justify-center rounded-t-lg flex-col">
-              <FaUserCircle className="text-gray-400 text-5xl" size={80} />
-              <div className="flex items-center  cursor-pointer">
-                {Array.from({ length: 5 }).map((_, index) =>
-                  index < provider.rating ? (
-                    <FaStar key={index} className="text-yellow-500" />
-                  ) : (
-                    <FaRegStar key={index} className="text-yellow-500" />
-                  )
-                )}
-                <span className="ml-2 text-gray-600 text-xs">
-                  ({provider.rating})
-                </span>
+            <div className="flex items-center  rounded-t-lg flex-row gap-11">
+              <div className="relative">
+                <FaUserCircle className="text-gray-400 text-5xl" size={80} />
+                <MdVerified
+                  size={20}
+                  className={`absolute top-0 right-2 ${
+                    provider?.verified == true
+                      ? "text-blue-500"
+                      : "text-gray-500"
+                  }`}
+                />
               </div>
-            </div>
-          )}
-          <div>
-            <div>
-              <div className="flex flex-col justify-between items-center">
+              <div className="flex cursor-pointer flex-col gap-1">
+                <h2 className="text-xl font-semibold">{provider.username}</h2>
                 <div className="flex items-center text-gray-600 mr-6">
                   <FaMapMarkerAlt className="mr-2" />
                   {provider.location}
                 </div>
-                <p className="text-sm">{provider.distance} miles away</p>
+                <div className="flex flex-row">
+                  {Array.from({ length: 5 }).map((_, index) =>
+                    index < averageRating ? (
+                      <FaStar key={index} className="text-yellow-500" />
+                    ) : (
+                      <FaRegStar key={index} className="text-yellow-500" />
+                    )
+                  )}
+                  <span className="ml-2 text-gray-600 text-xs">
+                    ({provider.ratingsCount})
+                  </span>
+                </div>
               </div>
 
-              <div className="flex pt-4 items-center">
-                <FaCircle className="mr-2 text-green-600" />
-                Available now
+              <div className="flex gap-2 flex-col">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm">
+                    {" "}
+                    Distance: {provider.distance} miles away
+                  </p>
+                </div>
+
+                <div>
+                  {provider.online ? (
+                    <div className="flex items-center text-gray-600">
+                      <FaCircle className="mr-2" />
+                      Available Now
+                    </div>
+                  ) : provider?.loggedOut == true ? (
+                    <div className="flex items-center text-gray-600">
+                      <FaCircle className="mr-2" />
+                      Offline
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-yellow-600">
+                      <FaCircle className="mr-2" />
+                      Away
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <span>
+                  <CurrencyFormatter amount={provider?.totalEarnings ?? 0} />+
+                  Total earnings
+                </span>
+                <span>{provider?.totalTasks ?? 0} Total tasks</span>
               </div>
             </div>
-          </div>
+          )}
         </div>
         <div className="p-4">
           <div className="mb-4">
@@ -95,7 +152,7 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
               ))}
             </ul>
           </div>
-          <div className="mb-4 flex gap-4">
+          {/* <div className="mb-4 flex gap-4">
             <button
               onClick={() => {
                 setShowBooking(!showBooking);
@@ -122,47 +179,20 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
                 <p>Message Me</p>
               </div>
             </button>
-          </div>
+          </div> */}
 
           {showBooking && (
-            <AvailabilityCalendar
-              provider={provider}
-              primaryColor="#5e60b9"
-            />
+            <AvailabilityCalendar provider={provider} primaryColor="#5e60b9" />
           )}
 
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold">Reviews</h3>
-            {provider.reviews.length == 0 ? (
-              <p className="text-gray-600">No reviews available</p>
-            ) : (
-              provider.reviews.map((review, index) => (
-                <div key={index} className="mb-2">
-                  <div className="flex justify-center items-center">
-                    {Array.from({ length: 5 }).map((_, i) =>
-                      i < review.rating ? (
-                        <FaStar key={i} className="text-yellow-500" />
-                      ) : (
-                        <FaRegStar key={i} className="text-yellow-500" />
-                      )
-                    )}
-                    <span className="ml-2 text-gray-600 text-xs">
-                      ({review.rating})
-                    </span>
-                  </div>
-                  <p className="text-gray-600 text-sm">{review.comment}</p>
-                  <p className="text-gray-500 text-xs">- {review.author}</p>
-                </div>
-              ))
-            )}
-          </div>
-          {provider.workHistory.length == 0 ? (
+          {/* <PaginatedReviews reviews={reviews} reviewsPerPage={5} /> */}
+          {tasks.length == 0 ? (
             <div className="mb-4">
               <h3 className="text-lg font-semibold">Work History</h3>
               <p className="text-gray-600">No work history available</p>
             </div>
           ) : (
-            <WorkHistory workHistory={provider.workHistory} />
+            <WorkHistory workHistory={tasks} />
           )}
           <Socialicons provider={provider} />
         </div>

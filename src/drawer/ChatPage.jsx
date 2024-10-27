@@ -1,14 +1,30 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
-import { FaPaperPlane, FaTasks } from "react-icons/fa";
+import {
+  FaCreditCard,
+  FaMoneyBillWave,
+  FaPaperPlane,
+  FaReceipt,
+  FaTasks,
+} from "react-icons/fa";
 import Drawer from "./Drawer"; // Import the reusable Drawer component
 import ChatContext from "../context/ChatContext"; // Import ChatContext
 import Quote from "../sharable/Quote";
 import Message from "../cards/Message";
 import { useSelector } from "react-redux";
-import { getAllMessages, listenForUserAccountChanges, updateTransactionInFirestore, updateProviderData } from "../services/firebaseService";
+import {
+  getAllMessages,
+  listenForUserAccountChanges,
+  addPayment,
+  updateProviderData,
+  addRating,
+  updateMessageInFirestore,
+} from "../services/firebaseService";
 import Button from "../sharable/Button";
-import PaymentDrawer from './stripePayment';
+import PaymentDrawer from "./stripePayment";
 import { increment } from "firebase/firestore";
+import RatingModal from "../sharable/RateUser";
+import { useGlobalContext } from "../context/GlobalContext";
+import AlertModal from "../sharable/AlertModal";
 const ChatPage = ({ provider, isOpen, onClose, thread }) => {
   const {
     messages,
@@ -19,19 +35,22 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
     setQuoteMessage,
     setMessages,
     quoteAlert,
-    setQuoteAlert, generatePDF, payInvoice
+    setQuoteAlert,
+    generatePDF,
+    payInvoice,
   } = useContext(ChatContext);
 
   const [input, setInput] = useState("");
   const [showNewMessageBubble, setShowNewMessageBubble] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
-  const [activeInvoice, setActiveInvoice] = useState(null)
+  const [activeInvoice, setActiveInvoice] = useState(null);
   const [type, setType] = useState("");
+  const [loading, setLoading] = useState(false);
   const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
   );
-
+  const { showAlert } = useGlobalContext();
   const handleSendMessage = () => {
     if (input.trim()) {
       const newMessage = {
@@ -57,6 +76,7 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   useEffect(() => {
     const unsubscribe = getAllMessages(
       currentProvider?.id,
@@ -69,8 +89,6 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-
-
 
   const handleScroll = () => {
     // if (messagesContainerRef.current) {
@@ -112,7 +130,7 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
   useEffect(() => {
     if (currentProvider?.id) {
       listenForUserAccountChanges(currentProvider.id, (user) => {
-        setActiveInvoice(user.currentInvoice)
+        setActiveInvoice(user.currentInvoice);
       });
     }
   }, [currentProvider]);
@@ -125,15 +143,133 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
     setShowPaymentDrawer(false);
   };
   const handleReaseEscrol = () => {
+    showAlert("Are you sure you want to release money to provider?", () => {
+      updateProviderData(currentProvider.id, {
+        "currentInvoice.rated": false,
+        "currentInvoice.released": true,
+      });
+      updateProviderData(provider?.id, {
+        "currentInvoice.rated": false,
+        "currentInvoice.released": true,
+        balance: increment(activeInvoice?.amount),
+      });
+
+      const newMessage = {
+        sender: {
+          id: currentProvider.id,
+          username: currentProvider.username,
+          photoURL: currentProvider?.photoURL ?? null,
+        },
+        receiver: {
+          id: provider.id,
+          username: provider.username,
+          photoURL: provider?.photoURL ?? null,
+        },
+        provider: activeInvoice.provider,
+        amount: activeInvoice.amount,
+        message: "released",
+        timestamp: Date.now(),
+        users: [currentProvider.id, provider.id],
+        type: "released",
+      };
+
+      addMessage(newMessage);
+
+      //save commission
+      const transactionCommission = {
+        amount: activeInvoice?.amount * 0.1,
+        timestamp: Date.now(),
+        sender: {
+          id: currentProvider?.id,
+          name: currentProvider?.username,
+        },
+        paymentMethod: "stripe",
+        type: "commission",
+        provider: activeInvoice?.provider,
+        receiver: activeInvoice.provider,
+        date: new Date(),
+        users: [activeInvoice?.provider?.id, currentProvider?.id],
+      };
+      addPayment(transactionCommission);
+      // updateTransactionInFirestore(activeInvoice?.threadId, activeInvoice?.id, { "status": "completed" })
+    });
+  };
+
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleSubmitRating = async ({ rating, comment }) => {
+    let to = "";
+    if (currentProvider?.id == activeInvoice?.provider) {
+      to = activeInvoice?.client?.id;
+    } else {
+      to = activeInvoice?.provider?.id;
+    }
+    const ratingData = {
+      from: {
+        username: currentProvider.username,
+        id: currentProvider.id,
+      },
+      to: {
+        username: provider.username,
+        id: provider.id,
+      },
+      rating: rating,
+      comment: comment,
+      author: currentProvider?.username,
+    };
+    const newMessage = {
+      sender: {
+        id: currentProvider.id,
+        username: currentProvider.username,
+        photoURL: currentProvider?.photoURL ?? null,
+      },
+      rating: rating,
+      comment: comment,
+      receiver: {
+        id: provider.id,
+        username: provider.username,
+        photoURL: provider?.photoURL ?? null,
+      },
+      provider: activeInvoice.provider,
+      amount: activeInvoice.amount,
+      message: "ratings",
+      timestamp: Date.now(),
+      users: [currentProvider.id, provider.id],
+      type: "ratings",
+    };
+
+    addMessage(newMessage);
+
+    setLoading(true);
+    await addRating(to, ratingData, activeInvoice);
+    setLoading(false);
     updateProviderData(currentProvider.id, {
       currentInvoice: null,
     });
-    updateProviderData(provider?.id, {
-      currentInvoice: null,
-      balance: increment(activeInvoice?.amount)
+  };
+  const handleSubmitTask = async () => {
+    showAlert("Are you sure you want to submit the task?", () => {
+      addMessage({
+        sender: activeInvoice.provider,
+        message: "review task",
+        timestamp: Date.now(),
+        users: [currentProvider.id, provider.id],
+        type: "reviewtask",
+        receiver: activeInvoice.client,
+        provider: activeInvoice.provider,
+      });
+      updateProviderData(currentProvider.id, {
+        "currentInvoice.status": "review",
+      });
     });
-    updateTransactionInFirestore(activeInvoice?.threadId, activeInvoice?.id, { "status": "completed" })
-  }
+  };
+
   return (
     <Drawer
       title={`${provider?.username}`}
@@ -145,39 +281,65 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
       }}
       actionButton={
         <div className="mr-4">
-          {
-            activeInvoice ? (
-              <div className="mr-4 gap-2 flex flex-row">
+          {activeInvoice ? (
+            <div className="mr-4 gap-2 flex flex-row">
+              {currentProvider.isProvider == true &&
+                activeInvoice?.paid == true &&
+                activeInvoice?.released == false && (
+                  <Button
+                    background="bg-yellow-400"
+                    callback={() => {
+                      handleSubmitTask();
+                    }}
+                    text={
+                      activeInvoice?.status == "review"
+                        ? "Send Reminder to Review"
+                        : "Submit the task"
+                    }
+                  />
+                )}
+              {activeInvoice?.rated == false && (
+                <Button callback={handleOpenModal} text={`Write a review`} />
+              )}
+              {currentProvider.isProvider == false &&
+              activeInvoice?.paid == null ? (
                 <Button
-                  background="bg-yellow-400"
-                  callback={() => {
-                    generatePDF("Invoice", thread);
-                  }}
-                  text="View Pending Invoice"
+                  callback={handleOpenPaymentDrawer}
+                  text="Deposit Escrol"
+                  icon={<FaCreditCard />}
                 />
-                {currentProvider.isProvider == false && activeInvoice?.paid == null ?
-                  <Button
-                    callback={handleOpenPaymentDrawer}
-                    text="Deposit Escrol"
-                  /> : <></>}
-                {currentProvider.isProvider == false && activeInvoice?.released == false ?
-                  <Button
-                    callback={handleReaseEscrol}
-                    text="Release Escrol"
-                  /> : <></>}
-              </div>
-            ) :
-
-              // currentProvider.isProvider ? <Button
-              //   callback={() => {
-              //     setShowQuotePopup(true);
-              //   }}
-              //   text={"Submit a Quote"}
-              // />
-              //   :
-              <></>
-          }
-
+              ) : (
+                <></>
+              )}
+              {activeInvoice?.paid == null ? (
+                <Button
+                  callback={() =>
+                    generatePDF("invoice", activeInvoice?.threadId)
+                  }
+                  text="View Invoice"
+                  background="bg-yellow-500"
+                  icon={<FaReceipt />}
+                />
+              ) : (
+                <></>
+              )}
+              {currentProvider.isProvider == false &&
+              activeInvoice?.released == false ? (
+                <Button callback={handleReaseEscrol} text="Release Escrol" />
+              ) : (
+                <></>
+              )}
+            </div>
+          ) : (
+            // currentProvider.isProvider ? <Button
+            //   callback={() => {
+            //     setShowQuotePopup(true);
+            //   }}
+            //   text={"Submit a Quote"}
+            // />
+            //   :
+            <></>
+          )}
         </div>
       }
     >
@@ -190,7 +352,7 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
           <div className="mb-4">
             {messages.map((message, index) => {
               if (
-                message.provider === currentProvider?.id &&
+                message.provider?.id === currentProvider?.id &&
                 message.type == "request"
               ) {
                 return (
@@ -254,14 +416,23 @@ const ChatPage = ({ provider, isOpen, onClose, thread }) => {
         setOpenModal={setQuoteAlert}
       />
 
-
-      {activeInvoice && <PaymentDrawer
-        isOpen={showPaymentDrawer}
-        onClose={handleClosePaymentDrawer}
-        threadId={thread?.id ?? activeInvoice.threadId}
-        payInvoice={payInvoice}
-      />}
-
+      {activeInvoice && (
+        <PaymentDrawer
+          isOpen={showPaymentDrawer}
+          onClose={handleClosePaymentDrawer}
+          threadId={thread?.id ?? activeInvoice.threadId}
+          payInvoice={payInvoice}
+        />
+      )}
+      <RatingModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleSubmitRating}
+        loading={loading}
+        userType={
+          activeInvoice?.provider == currentProvider?.id ? "User" : "Provider"
+        }
+      />
     </Drawer>
   );
 };
@@ -314,7 +485,6 @@ const AcceptRejectOffer = ({ isOpen, setOpenModal }) => {
               callback={() => {
                 setQuoteAlert(false);
                 if (quoteAlertType === "accept") {
-                  console.log(quotemessage.quote);
                   setDate(quotemessage.date);
                   setPrice(quotemessage.quote);
                   handleSendQuote("accept");

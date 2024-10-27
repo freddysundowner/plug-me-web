@@ -12,7 +12,7 @@ const LoginSignupDrawer = ({ isOpen, onClose, type }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [username, setUsername] = useState("");
-  const { setShowAlert } = useContext(ChatContext); // Use ChatContext
+  const { setShowAlert } = useContext(ChatContext); 
 
   const handleSubmit = async (event) => {
     event.preventDefault();

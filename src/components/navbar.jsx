@@ -12,7 +12,7 @@ const NavBar = () => {
 
   return (
     <nav className="position-fixed z-50 bg-white shadow-md fixed top-0 left-0 w-full flex items-center justify-between px-4 py-2 rounded-bl-3xl">
-      <div className="flex w-[70%] m-auto justify-between">
+      <div className="flex w-[80%] m-auto justify-between">
         <div className="flex items-center">
           <FiMapPin className=" text-5xl text-purple-500" />
           <div>

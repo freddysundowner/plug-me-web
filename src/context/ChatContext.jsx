@@ -1,19 +1,16 @@
 import React, { createContext, useState, useEffect } from "react";
 import {
   addMessageToFirestore,
-  updateMessageInFirestore, addInvoice, updateProviderData, addPayment
+  updateMessageInFirestore,
+  addInvoice,
+  updateProviderData,
+  addPayment,
 } from "../services/firebaseService";
 import jsPDF from "jspdf";
 import { useLoading } from "./LoadingContext";
 import { useSelector } from "react-redux";
 import { dateFormat } from "../utils/dateFormat";
-import {
-  updateProvider,
-} from "../redux/features/providerSlice";
 import { useDispatch } from "react-redux";
-import { increment } from "firebase/firestore";
-import apiClient, { stripeIntent } from "../services/httpClient";
-import { CardElement } from '@stripe/react-stripe-js';
 
 const ChatContext = createContext();
 
@@ -45,18 +42,22 @@ export const ChatProvider = ({ children }) => {
     (state) => state.provider.currentProvider
   );
 
-
   const addMessage = async (message) => {
     await addMessageToFirestore(message);
   };
   const generateReceipePDF = (title = "Receipt", thread = null) => {
     let newQuote = quotemessage;
     const doc = new jsPDF();
-    console.log(thread)
+    console.log(thread);
     if (thread != null) {
-      const filteredMessages = messages.filter((msg) => String(msg?.threadId) === String(thread) && msg?.type == 'quote' && msg.paid == true);
+      const filteredMessages = messages.filter(
+        (msg) =>
+          String(msg?.threadId) === String(thread) &&
+          msg?.type == "quote" &&
+          msg.paid == true
+      );
       console.log(messages);
-      newQuote = filteredMessages[0]
+      newQuote = filteredMessages[0];
     }
 
     // Add title and other details
@@ -65,8 +66,10 @@ export const ChatProvider = ({ children }) => {
 
     doc.setFontSize(12);
     doc.text(`Date: ${dateFormat(newQuote.date?.seconds * 1000)}`, 14, 40);
-    doc.text(`From: ${newQuote?.slot?.from}`, 14, 50);
-    doc.text(`To: ${newQuote?.slot?.to}`, 14, 60);
+    if (newQuote?.slot?.from && newQuote?.slot?.to) {
+      doc.text(`From: ${newQuote?.slot?.from}`, 14, 50);
+      doc.text(`To: ${newQuote?.slot?.to}`, 14, 60);
+    }
 
     // Add quotation details in a table
     const quoteData = [
@@ -82,9 +85,11 @@ export const ChatProvider = ({ children }) => {
       styles: { fontSize: 10, halign: "center", valign: "middle" },
       theme: "striped",
     });
-
-    // Add message
-    doc.text(`Paid Via: ${newQuote.paidVia}`, 14, doc.autoTable.previous.finalY + 20);
+    doc.text(
+      `Paid Via: ${newQuote.paidVia}`,
+      14,
+      doc.autoTable.previous.finalY + 20
+    );
     doc.text(
       "Thank you for showing interest in our service.",
       14,
@@ -100,21 +105,24 @@ export const ChatProvider = ({ children }) => {
   const generatePDF = (title = "Quotation", thread = null) => {
     let newQuote = quotemessage;
     const doc = new jsPDF();
-    console.log(thread)
     if (thread != null) {
-      const filteredMessages = messages.filter((msg) => String(msg?.threadId) === String(thread) && msg?.type == 'quote' && msg.paid == false);
-      console.log(messages);
-      newQuote = filteredMessages[0]
+      const filteredMessages = messages.filter(
+        (msg) =>
+          String(msg?.threadId) === String(thread) &&
+          msg?.type == "quote" &&
+          msg.paid == false
+      );
+      newQuote = filteredMessages[0];
     }
-
-    // Add title and other details
     doc.setFontSize(18);
     doc.text(title, 105, 20, null, null, "center");
 
     doc.setFontSize(12);
     doc.text(`Date: ${dateFormat(newQuote.date?.seconds * 1000)}`, 14, 40);
-    doc.text(`From: ${newQuote?.slot?.from}`, 14, 50);
-    doc.text(`To: ${newQuote?.slot?.to}`, 14, 60);
+    if (newQuote?.slot?.from && newQuote?.slot?.to) {
+      doc.text(`From: ${newQuote?.slot?.from}`, 14, 50);
+      doc.text(`To: ${newQuote?.slot?.to}`, 14, 60);
+    }
 
     // Add quotation details in a table
     const quoteData = [
@@ -147,77 +155,78 @@ export const ChatProvider = ({ children }) => {
   };
   const payInvoice = async (threadId) => {
     const invoiceRes = messages.filter(
-      (msg) => String(msg?.threadId) === String(threadId) && msg?.type === 'quote' && msg?.paid === false
+      (msg) =>
+        String(msg?.threadId) === String(threadId) &&
+        msg?.type === "quote" &&
+        msg?.paid === false
     );
 
-    if (invoiceRes.length === 0) return; 
+    if (invoiceRes.length === 0) return;
 
     const invoice = invoiceRes[0];
     const amount = invoice?.quote;
 
     try {
-        const payload = {
-          paid: true,
-          paidDate: new Date(),
-          paidBy: currentProvider?.id,
-          paidVia: 'stripe',
-          status: 'completed',
-        };
 
-        updateMessageInFirestore(threadId, invoice.id, payload);
+      addMessage({
+        sender: {
+          id: currentProvider?.id,
+          name: currentProvider?.username,
+        },
+        receiver: {
+          id: invoice?.provider?.id,
+          name: invoice?.provider?.name,
+        },
+        provider: invoice?.provider,
+        amount: amount * 0.9,
+        date: new Date(),
+        message: "Payment successful",
+        timestamp: Date.now(),
+        type: "progress",
+        users: [currentProvider?.id, invoice?.provider?.id],
+        threadId: invoice?.threadId,
+      });
 
-        //save payment
-        const transaction = {
-          amount: amount * 0.90,
-          timestamp: Date.now(),
-          sender: {
-            id: currentProvider?.id,
-            name: currentProvider?.username,
-          },
-          paymentMethod: 'stripe',
-          status: "pending",
-          type: 'payment',
-          receiver: invoice.receiver.id === invoice.provider ? invoice.receiver : invoice.sender,
-          date: new Date(),
-          users: [invoice?.provider, invoice.user],
-        };
-        addPayment(transaction);
+      // updateMessageInFirestore(threadId, invoice.id, payload);
 
-        //save commission
+      //save payment
+      const transaction = {
+        amount: amount * 0.9,
+        totalAmount: amount,
+        timestamp: Date.now(),
+        sender: {
+          id: currentProvider?.id,
+          name: currentProvider?.username,
+        },
+        provider: invoice?.provider,
+        paymentMethod: "stripe",
+        status: "pending",
+        type: "payment",
+        receiver: invoice?.provider,
+        date: new Date(),
+        users: [invoice?.provider?.id, invoice?.client?.id],
+        invoiceId: invoice?.id,
+        threadId: invoice?.threadId,
+      };
+      addPayment(transaction);
 
+      updateProviderData(invoice?.sender?.id, {
+        "currentInvoice.paid": true,
+        "currentInvoice.released": false,
+        "currentInvoice.amount": amount,
+      });
+      updateProviderData(invoice?.receiver?.id, {
+        "currentInvoice.paid": true,
+        "currentInvoice.released": false,
+        "currentInvoice.amount": amount,
+      });
 
-        // const transactionCommission = {
-        //   amount: amount * 0.10,
-        //   timestamp: Date.now(),
-        //   sender: {
-        //     id: currentProvider?.id,
-        //     name: currentProvider?.username,
-        //   },
-        //   paymentMethod: 'stripe',
-        //   type: 'commission',
-        //   receiver: invoice.receiver.id === invoice.provider ? invoice.receiver : invoice.sender,
-        //   date: new Date(),
-        //   users: [invoice?.provider],
-        // };
-        // addPayment(transactionCommission);
-
-        updateProviderData(invoice?.sender?.id, {
-          "currentInvoice.paid": true,
-          "currentInvoice.released": false,
-          "currentInvoice.amount": amount,
-        });
-        updateProviderData(invoice?.receiver?.id, {
-          "currentInvoice.paid": true,
-          "currentInvoice.released": false,
-          "currentInvoice.amount": amount,
-        });
-
-        console.log('Payment successful and invoice marked as paid!');
-        return { success: true };
+      console.log("Payment successful and invoice marked as paid!");
+      return { success: true };
       // }
     } catch (error) {
-      console.error('Error processing payment:', error);
-      return { success: false, error: 'Payment processing failed' };
+      console.error("Error processing payment:", error);
+      return { success: false, error: "Payment processing failed" };
     }
   };
 
@@ -255,10 +264,12 @@ export const ChatProvider = ({ children }) => {
       if (type === "update") {
         await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
           status: "updated",
-          message: `Hi ${quotemessage?.sender?.username
-            }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${quotemessage?.slot?.from
-            } to ${quotemessage?.slot?.to} has been updated.`,
-          quote: quotemessage?.quote
+          message: `Hi ${
+            quotemessage?.sender?.username
+          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
+            quotemessage?.slot?.from
+          } to ${quotemessage?.slot?.to} has been updated.`,
+          quote: quotemessage?.quote,
         });
         await addMessage({
           ...message,
@@ -267,9 +278,11 @@ export const ChatProvider = ({ children }) => {
       } else if (type === "withthdraw") {
         await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
           status: "withdrawn",
-          message: `Hi ${quotemessage?.sender?.username
-            }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${quotemessage?.slot?.from
-            } to ${quotemessage?.slot?.to} has been withdrawn.`,
+          message: `Hi ${
+            quotemessage?.sender?.username
+          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
+            quotemessage?.slot?.from
+          } to ${quotemessage?.slot?.to} has been withdrawn.`,
         });
         await addMessage({
           ...message,
@@ -278,25 +291,28 @@ export const ChatProvider = ({ children }) => {
       } else if (type === "accept") {
         await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
           status: "accepted",
-          message: `Hi ${quotemessage?.sender?.username
-            }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${quotemessage?.slot?.from
-            } to ${quotemessage?.slot?.to} has been accepted.`,
-          type: "quote"
+          message: `Hi ${
+            quotemessage?.sender?.username
+          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
+            quotemessage?.slot?.from
+          } to ${quotemessage?.slot?.to} has been accepted.`,
+          type: "quote",
         });
-        console.log(quotemessage.provider);
         await addInvoice(quotemessage.provider, {
-          "threadId": quotemessage.threadId,
-          "invoiceId": quotemessage.id,
-          "status": "pending",
-          client: quotemessage?.user,
-          date: new Date()
-        })
+          threadId: quotemessage.threadId,
+          invoiceId: quotemessage.id,
+          status: "pending",
+          client: quotemessage?.client,
+          date: new Date(),
+        });
       } else if (type === "reject") {
         await updateMessageInFirestore(quotemessage.threadId, quotemessage.id, {
           status: "rejected",
-          message: `Hi ${quotemessage?.sender?.username
-            }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${quotemessage?.slot?.from
-            } to ${quotemessage?.slot?.to} has been declined.`,
+          message: `Hi ${
+            quotemessage?.sender?.username
+          }, Quotation for ${quotemessage?.service?.value?.trim()} on ${date} from ${
+            quotemessage?.slot?.from
+          } to ${quotemessage?.slot?.to} has been declined.`,
         });
         await addMessage({
           ...message,
@@ -426,7 +442,18 @@ export const ChatProvider = ({ children }) => {
         quoteAlertType,
         setQuoteAlertType,
         handleWithdrawReject,
-        date, generatePDF, taskBoardOpen, setIsTaskBoardOpen, pdfData, setPdfData, modalIsOpen, invoices, setInvoices, setModalIsOpen, payInvoice, generateReceipePDF
+        date,
+        generatePDF,
+        taskBoardOpen,
+        setIsTaskBoardOpen,
+        pdfData,
+        setPdfData,
+        modalIsOpen,
+        invoices,
+        setInvoices,
+        setModalIsOpen,
+        payInvoice,
+        generateReceipePDF,
       }}
     >
       {children}

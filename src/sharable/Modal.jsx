@@ -1,8 +1,3 @@
-import { useContext, useState } from "react";
-import ChatContext from "../context/ChatContext";
-import Select from "react-select";
-import { FaTimes, FaUserCircle } from "react-icons/fa";
-
 const AcceptRejectOffer = ({ title, children, isOpen, onClose }) => {
   if (isOpen === false) return null;
   return (

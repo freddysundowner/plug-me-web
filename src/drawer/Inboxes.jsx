@@ -5,6 +5,7 @@ import { timeAgo } from "../utils/timeAgo";
 import DrawerContext from "../context/DrawerContext";
 import { useAuth } from "../context/AuthContext";
 import { getUnreadCount } from "../services/firebaseService";
+import { generateQuoteMsgs } from "../utils/msgs";
 
 const Inboxes = ({ isOpen, onClose, provider }) => {
 
@@ -44,17 +45,16 @@ const InboxCard = ({ inbox, currentUser, provider }) => {
         closeDrawer("inboxDrawer");
         let p = null;
         if (inbox?.sender?.id === provider?.id) {
-          p = inbox?.receiver
+          p = inbox?.receiver;
         } else {
-          p = inbox?.sender
+          p = inbox?.sender;
         }
-        console.log(inbox?.id);
         openDrawer("chatDrawer", p, inbox?.id, null, inbox?.id);
       }}
     >
       <div className="flex-1">
         <p className="font-bold">{inbox?.sender?.username}</p>
-        <p>{inbox.message}</p>
+        <p>{generateQuoteMsgs(inbox, currentUser?.uid)}</p>
         <span className="text-xs text-gray-600">
           {timeAgo(inbox.timestamp)}
         </span>

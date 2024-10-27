@@ -1,5 +1,11 @@
 import { useContext, useState } from "react";
-import { FaCheck, FaEye, FaTimesCircle } from "react-icons/fa";
+import {
+  FaCheck,
+  FaEye,
+  FaTimesCircle,
+  FaStar,
+  FaRegStar,
+} from "react-icons/fa";
 import { timeAgo } from "../utils/timeAgo";
 import Modal from "react-modal";
 import "jspdf-autotable";
@@ -7,24 +13,53 @@ import { useSelector } from "react-redux";
 import ChatContext from "../context/ChatContext";
 import { generateQuoteMsgs } from "../utils/msgs";
 import Button from "../sharable/Button";
-const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
+import { updateMessageInFirestore } from "../services/firebaseService";
+const Message = ({ message, provider }) => {
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
   );
   const {
-    setShowQuotePopup,
     setQuoteMessage,
-    handleSendQuote,
     setQuoteAlert,
-    quoteAlertType,
-    setQuoteAlertType, generatePDF, pdfData, modalIsOpen, setModalIsOpen, generateReceipePDF
+    setQuoteAlertType,
+    generatePDF,
+    pdfData,
+    modalIsOpen,
+    setModalIsOpen,
+    generateReceipePDF,
+    addMessage,
   } = useContext(ChatContext);
 
+  const handleReject = async (message) => {
+    updateMessageInFirestore(message.threadId, message.id, {
+      status: "void",
+    });
+    addMessage({
+      sender: {
+        id: currentProvider.id,
+        username: currentProvider.username,
+        photoURL: currentProvider?.photoURL ?? null,
+      },
+      receiver: {
+        id: provider.id,
+        username: provider.username,
+        photoURL: provider?.photoURL ?? null,
+      },
+      service: message.service,
+      message: "rejected",
+      timestamp: Date.now(),
+      users: [currentProvider.id, provider.id],
+      type: "rejected",
+    });
+  };
 
   return (
     <div
-      className={`flex ${message.sender?.id === provider.id ? "justify-end" : "justify-start"
-        }`}
+      className={`flex ${
+        message.sender?.id === provider.id
+          ? "justify-end ml-10"
+          : "justify-start mr-10"
+      }`}
     >
       <Modal
         isOpen={modalIsOpen}
@@ -52,114 +87,125 @@ const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
         </button>
       </Modal>
       <div
-        className={`p-2 my-2 rounded-md ${message.type === "request"
-          ? "bg-yellow-300 text-black"
-          : message.type == "info"
+        className={`p-2 my-2 rounded-md ${
+          message.type === "request"
+            ? "bg-yellow-300 text-black"
+            : message.type == "info"
             ? "bg-red-300"
             : message.sender?.id === provider.id
-              ? "bg-blue-500 text-white"
-              : "bg-gray-200 text-black"
-          }`}
+            ? "bg-blue-500 text-white"
+            : "bg-gray-200 text-black"
+        }`}
       >
         <p>{generateQuoteMsgs(message, currentProvider?.id)}</p>
 
-        {message.type === "quote" ? (
+        {message.type === "quote" ||
+        message.type === "released" ||
+        message.type === "ratings" ? (
           <div className="flex mt-2 gap-4">
-            {message.status === "completed" && (<button
-              onClick={() => {
-                if (message.paid == true) {
-                  generateReceipePDF("Receipt", message.threadId)
-                } else {
-                  generatePDF(message.status == 'accepted' ? "Invoice" : "Quotation", message.threadId);
-
-                }
-              }
-              }
-              className="px-4 py-2 bg-black text-white rounded-md"
-            >
-              <div className="flex gap-2 items-center">
-                <FaEye />
-                {
-                  message?.paid == true ?
-                    <p>View Receipt</p> :
-                    <p>View {message.status == 'accepted' ? "Invoice" : "Quotation"}</p>
-                }
-              </div>
-            </button>)}
-            {message.provider == currentProvider.id && message.status === "pending" && (<button
-              onClick={() => {
-                if (message.paid == true) {
-                  generateReceipePDF("Receipt", message.threadId)
-                } else {
-                  generatePDF(message.status == 'accepted' ? "Invoice" : "Quotation", message.threadId);
-
-                }
-              }
-              }
-              className="px-4 py-2 bg-black text-white rounded-md"
-            >
-              <div className="flex gap-2 items-center">
-                <FaEye />
-                {
-                  message?.paid == true ?
-                    <p>View Receipt</p> :
-                    <p>View {message.status == 'accepted' ? "Invoice" : "Quotation"}</p>
-                }
-              </div>
-            </button>)}
-            {message.provider == currentProvider.id && message.status === "pending" && (
-              <button
-                onClick={() => {
-                  setQuoteMessage(message);
-                  setQuoteAlert(true);
-                  setQuoteAlertType("accept");
-                }}
-                className="px-4 py-2 bg-green-500 text-white rounded-md"
-              >
-                <div className="flex gap-2 items-center">
-                  <FaCheck />
-                  <p>Accept</p>
+            {message.status === "progress" ||
+              (message.status === "accepted" && (
+                <button
+                  onClick={() => {
+                    if (message.paid == true) {
+                      generateReceipePDF("Receipt", message.threadId);
+                    } else {
+                      generatePDF(
+                        message.status == "accepted" ? "Invoice" : "Quotation",
+                        message.threadId
+                      );
+                    }
+                  }}
+                  className="px-4 py-2 bg-black text-white rounded-md"
+                >
+                  <div className="flex gap-2 items-center">
+                    <FaEye />
+                    {message?.paid == true ? (
+                      <p>View Receipt</p>
+                    ) : (
+                      <p>
+                        View{" "}
+                        {message.status == "accepted" ? "Invoice" : "Quotation"}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            {message.type === "ratings" && (
+              <div>
+                <div className="flex items-center  cursor-pointer">
+                  {Array.from({ length: 5 }).map((_, index) =>
+                    index < message?.rating ? (
+                      <FaStar key={index} className="text-yellow-500" />
+                    ) : (
+                      <FaRegStar key={index} className="text-yellow-500" />
+                    )
+                  )}
+                  <span className=" text-gray-600 text-xs">
+                    ({message.rating ?? 0})
+                  </span>
                 </div>
-              </button>
+
+                <span className=" text-gray-600 text-xs">
+                  {message.comment ?? ""}
+                </span>
+              </div>
             )}
-            {message.provider == currentProvider.id && message.status === "pending" && (
-              <Button
-                callback={() => {
-                  setQuoteMessage({ ...message, rejectBy: currentProvider.id });
-                  setQuoteAlert(true);
-                  setQuoteAlertType("reject");
-                }}
-                text="Reject"
-                background="bg-red-500"
-                icon={<FaTimesCircle />}
-              />
-            )}
-            {/* {message.provider === currentProvider.id && message.status === "pending" && (
-              <Button
-                callback={() => {
-                  setQuoteMessage(message);
-                  setQuoteAlert(true);
-                  setQuoteAlertType("reject");
-                }}
-                text="Withdraw"
-                background="bg-red-500"
-                icon={<FaTimesCircle />}
-              />
-            )} */}
-            {/* {message.provider === currentProvider.id && message.status === "pending" && (
-              <button
-                onClick={() => {
-                  setQuoteMessage(message);
-                  setShowQuotePopup(true);
-                }}
-                className="px-4 py-2 bg-green-500 text-white rounded-md"
-              >
-                <div className="flex gap-2 items-center">
-                  <FaCheck />
-                  <p>Edit Quote</p>
-                </div>
-              </button>
-            )} */}
+            {message.provider?.id == currentProvider.id &&
+              message.status === "pending" && (
+                <button
+                  onClick={() => {
+                    if (message.paid == true) {
+                      generateReceipePDF("Receipt", message.threadId);
+                    } else {
+                      generatePDF(
+                        message.status == "accepted" ? "Invoice" : "Quotation",
+                        message.threadId
+                      );
+                    }
+                  }}
+                  className="px-4 py-2 bg-black text-white rounded-md"
+                >
+                  <div className="flex gap-2 items-center">
+                    <FaEye />
+                    {message?.paid == true ? (
+                      <p>View Receipt</p>
+                    ) : (
+                      <p>
+                        View{" "}
+                        {message.status == "accepted" ? "Invoice" : "Quotation"}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              )}
+            {message.provider?.id == currentProvider.id &&
+              message.status === "pending" && (
+                <button
+                  onClick={() => {
+                    setQuoteMessage(message);
+                    setQuoteAlert(true);
+                    setQuoteAlertType("accept");
+                  }}
+                  className="px-4 py-2 bg-green-500 text-white rounded-md"
+                >
+                  <div className="flex gap-2 items-center">
+                    <FaCheck />
+                    <p>Accept</p>
+                  </div>
+                </button>
+              )}
+            {message.provider?.id == currentProvider.id &&
+              message.status === "pending" && (
+                <Button
+                  callback={() => {
+                    handleReject(message);
+                  }}
+                  text="Reject"
+                  background="bg-red-500"
+                  icon={<FaTimesCircle />}
+                />
+              )}
           </div>
         ) : (
           ""
@@ -169,13 +215,10 @@ const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
         </span>
         {message.type === "request" &&
           message.status === "pending" &&
-          message.provider === currentProvider.id && (
+          message.provider?.id === currentProvider.id && (
             <div className="flex mt-2">
               <button
                 onClick={() => {
-                  // setQuoteMessage(message);
-                  // setShowQuotePopup(true);
-
                   setQuoteMessage(message);
                   setQuoteAlert(true);
                   setQuoteAlertType("accept");
@@ -190,9 +233,9 @@ const Message = ({ message, provider, acceptOffer, rejectOffer }) => {
 
               <button
                 onClick={() => {
-                  setQuoteMessage({ ...message, rejectBy: currentProvider.id });
-                  setQuoteAlert(true);
-                  setQuoteAlertType("reject");
+                  updateMessageInFirestore(message.threadId, message.id, {
+                    status: "void",
+                  });
                 }}
                 className="px-4 py-2 bg-red-500 text-white rounded-md"
               >

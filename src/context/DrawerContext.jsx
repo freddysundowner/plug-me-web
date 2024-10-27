@@ -13,23 +13,73 @@ export const DrawerProvider = ({ children }) => {
     becomeProvider: { isOpen: false, selectedProvider: null },
   });
 
+  // const openDrawer = useCallback(
+  //   (drawer, provider = null, messages = [], type = "login", thread) => {
+  //     setDrawerState((prevState) => ({
+  //       ...prevState,
+  //       [drawer]: {
+  //         isOpen: true,
+  //         selectedProvider: provider,
+  //         messages,
+  //         type,
+  //         thread,
+  //       },
+  //     }));
+  //   },
+  //   []
+  // );
+
+  // const closeDrawer = useCallback((drawer) => {
+  //   setDrawerState((prevState) => ({
+  //     ...prevState,
+  //     [drawer]: {
+  //       isOpen: false,
+  //       selectedProvider: null,
+  //       messages: [],
+  //       type: "login",
+  //       thread: null,
+  //     },
+  //   }));
+  // }, []);
+  const closeAllDrawers = () => {
+    setDrawerState((prevState) => {
+      const updatedState = {};
+      for (const drawer in prevState) {
+        updatedState[drawer] = { ...prevState[drawer], isOpen: false };
+      }
+      return updatedState;
+    });
+  };
+  const updateDrawerState = (drawer, updates) => {
+    setDrawerState((prevState) => ({
+      ...prevState,
+      [drawer]: { ...prevState[drawer], ...updates },
+    }));
+  };
+
   const openDrawer = useCallback(
     (drawer, provider = null, messages = [], type = "login", thread) => {
-      setDrawerState((prevState) => ({
-        ...prevState,
-        [drawer]: { isOpen: true, selectedProvider: provider, messages, type, thread },
-      }));
+      closeAllDrawers();
+      updateDrawerState(drawer, {
+        isOpen: true,
+        selectedProvider: provider,
+        messages,
+        type,
+        thread,
+      });
     },
     []
   );
 
   const closeDrawer = useCallback((drawer) => {
-    setDrawerState((prevState) => ({
-      ...prevState,
-      [drawer]: { isOpen: false, selectedProvider: null },
-    }));
+    updateDrawerState(drawer, {
+      isOpen: false,
+      selectedProvider: null,
+      messages: [],
+      type: "login",
+      thread: null,
+    });
   }, []);
-
   return (
     <DrawerContext.Provider value={{ drawerState, openDrawer, closeDrawer }}>
       {children}

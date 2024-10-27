@@ -34,7 +34,7 @@ export const updateProviderData = async (userId, data) => {
   await updateDoc(userDocRef, data);
 };
 
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
+export const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const toRadians = (degrees) => (degrees * Math.PI) / 180;
 
   const R = 6371; // Radius of the Earth in kilometers
@@ -43,53 +43,43 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRadians(lat1)) *
-    Math.cos(toRadians(lat2)) *
-    Math.sin(dLon / 2) *
-    Math.sin(dLon / 2);
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c; // Distance in kilometers
 };
 
+export const getCurrentPosition = () => {
+  return navigator.geolocation.getCurrentPosition((position) => {
+    const { latitude, longitude } = position.coords;
+
+    return { latitude, longitude };
+  });
+};
+
 export const getProviders = async (provider) => {
-  const getCurrentPosition = () => {
-    return new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject);
-    });
-  };
-
-  const position = await getCurrentPosition();
-  const userLat = position.coords.latitude;
-  const userLon = position.coords.longitude;
-
-  let usersQuery = query(
+  const usersQuery = query(
     collection(db, "users"),
     where("isProvider", "==", true),
-    orderBy("distance", "asc")
+    where("available", "==", true)
   );
   const querySnapshot = await getDocs(usersQuery);
-
   const providersList = querySnapshot.docs.map((doc) => {
     const providerData = doc.data();
-    const providerLocation = providerData.geopoint;
-    const distance = calculateDistance(
-      userLat,
-      userLon,
-      providerLocation.latitude,
-      providerLocation.longitude
-    );
 
     return {
       id: doc.id,
       ...providerData,
-      distance: distance.toFixed(2),
     };
   });
-
   if (provider?.id) {
     return providersList.filter((doc) => doc.id !== provider.id);
   }
+
   return providersList;
 };
+
 export const getThreadId = async (currentUserId, recipientUserId) => {
   try {
     // Query to check if a thread exists between the current user and the recipient
@@ -114,12 +104,40 @@ export const getThreadId = async (currentUserId, recipientUserId) => {
   }
 };
 export const addInvoice = async (provider, invoiceData) => {
-  updateProviderData(provider, { "currentInvoice": { id: invoiceData.invoiceId, threadId: invoiceData.threadId } })
-  updateProviderData(invoiceData?.client, { "currentInvoice": { id: invoiceData.invoiceId, threadId: invoiceData.threadId } })
+  updateProviderData(provider?.id, {
+    currentInvoice: {
+      id: invoiceData.invoiceId,
+      threadId: invoiceData.threadId,
+      provider,
+      client: invoiceData?.client,
+    },
+  });
+  updateProviderData(invoiceData?.client?.id, {
+    currentInvoice: {
+      id: invoiceData.invoiceId,
+      threadId: invoiceData.threadId,
+      client: invoiceData?.client,
+      provider,
+    },
+  });
+};
+export const addRating = async (userId, ratingData, invoice) => {
+  const ratingsRef = collection(db, "users", userId, "ratings");
+  const ratingDocRef = doc(ratingsRef);
+  await setDoc(ratingDocRef, ratingData);
 
-}
-
-export const getTransactionThreadId = async (currentUserId, recipientUserId) => {
+  updateProviderData(userId, {
+    ratingsCount: increment(1),
+    totalRatings: increment(ratingData?.rating),
+  });
+  updateMessageInFirestore(invoice?.threadId, invoice?.id, {
+    rating: ratingData,
+  });
+};
+export const getTransactionThreadId = async (
+  currentUserId,
+  recipientUserId
+) => {
   try {
     const inboxRef = collection(db, "transactions");
     const q = query(inboxRef, where("users", "array-contains", currentUserId));
@@ -159,11 +177,7 @@ export const addPayment = async (transaction) => {
     } else {
       threadId = Date.now().toString();
       threadRef = doc(collection(db, "transactions"), threadId);
-      await setDoc(
-        threadRef,
-        { ...transaction, threadId },
-        { merge: true }
-      );
+      await setDoc(threadRef, { ...transaction, threadId }, { merge: true });
       await addDoc(collection(threadRef, "payments"), {
         ...transaction,
         threadId,
@@ -172,7 +186,7 @@ export const addPayment = async (transaction) => {
   } catch (error) {
     console.error("Error adding message to Firestore:", error);
   }
-}
+};
 export const getInvoice = async (userId) => {
   const inboxQuery = query(
     collection(db, "inbox"),
@@ -186,7 +200,7 @@ export const getInvoice = async (userId) => {
   for (const inboxDoc of inboxSnapshot.docs) {
     const messagesQuery = query(
       collection(db, `inbox/${inboxDoc.id}/messages`),
-      where("type", "==", 'quote'),
+      where("type", "==", "quote"),
       orderBy("timestamp", "desc")
     );
 
@@ -198,9 +212,19 @@ export const getInvoice = async (userId) => {
     allMessages.push(...messages);
   }
   return allMessages;
-}
-export const updateTransactionInFirestore = async (threadId, messageId, data) => {
-  const messageDocRef = doc(db, "transactions", threadId, "payments", messageId);
+};
+export const updateTransactionInFirestore = async (
+  threadId,
+  messageId,
+  data
+) => {
+  const messageDocRef = doc(
+    db,
+    "transactions",
+    threadId,
+    "payments",
+    messageId
+  );
   await updateDoc(messageDocRef, data);
 };
 export const getTransactions = async (userId) => {
@@ -227,8 +251,10 @@ export const getTransactions = async (userId) => {
     allTransactions.push(...transactions);
   }
   return allTransactions;
-}
+};
 export const addMessageToFirestore = async (message) => {
+  console.log(message);
+
   try {
     let threadId = await getThreadId(
       message?.sender?.id,
@@ -275,7 +301,6 @@ export const addMessageToFirestore = async (message) => {
 };
 export const listenForUserAccountChanges = (userId, callback) => {
   const userDocRef = doc(db, "users", userId);
-  // Step 2: Set up a real-time listener for the user's document
   const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
     if (docSnapshot.exists()) {
       const userData = docSnapshot.data();
@@ -363,7 +388,6 @@ export const onInboxOrChatOpen = async (threadId, currentUserId) => {
 };
 
 const resetUnreadCount = async (threadId, userId) => {
-  console.log("resetUnreadCount", threadId, userId);
   const threadRef = doc(db, "inbox", threadId);
   await updateDoc(threadRef, {
     [`unreadCounts.${userId}`]: 0,
@@ -378,4 +402,21 @@ export const getUnreadCount = async (threadId, userId) => {
     return data.unreadCounts?.[userId] || 0;
   }
   return 0;
+};
+
+export const logoutFirebase = async (userId, status) => {
+  const userDocRef = doc(db, "users", userId);
+  await updateDoc(userDocRef, { online: false, loggedOut: status });
+};
+
+export const getUserRatings = async (userId) => {
+  console.log("getting ratings", userId);
+
+  const ratingsQuery = query(collection(db, "users", userId, "ratings"));
+  const ratingsSnapshot = await getDocs(ratingsQuery);
+  const ratings = ratingsSnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+  return ratings;
 };

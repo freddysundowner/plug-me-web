@@ -55,11 +55,11 @@ export const fetchServices = async () => {
 
 // Get place details from Google Places API
 export const getPlaceDetails = async (placeId) => {
-  const response = await apiClient.get("/place/place-details", {
+  const response = await apiClient.get("/place-details", {
     params: { placeId },
   });
   console.log(response.data);
-  return response.data.location;
+  return response.data?.geometry?.location;
 };
 
 export default apiClient;

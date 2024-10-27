@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
-import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import { Provider, useSelector, useDispatch } from "react-redux";
 import { store } from "../redux/store";
-import SearchBar from "./SearchBar";
 import FeaturedProviders from "./FeaturedProviders";
 import Menu from "./Menu";
 import SearchResults from "../drawer/SearchResults";
@@ -18,9 +16,8 @@ import { GlobalProvider } from "../context/GlobalContext";
 import Switch from "../sharable/Switch";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import LoginSignupDrawer from "../drawer/LoginSignupDrawer";
-const libraries = ["places"];
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
 import {
   setProvider,
   clearProvider,
@@ -31,20 +28,27 @@ import { auth, db } from "../auth/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import ProviderFormDrawer from "../drawer/ProviderFormDrawer";
 import NavBar from "./navbar";
-import {
-  getProviders
-} from "../services/firebaseService";
+import { calculateDistance, getProviders } from "../services/firebaseService";
 import { LoadingProvider } from "../context/LoadingContext";
+import useOnlineStatus from "../hooks/useOnlineStatus";
+import MapComponent from "./Map";
+import useGeolocation from "../hooks/useGeolocation";
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const libraries = ["places", "drawing", "geometry", "marker"];
 
-const containerStyle = {
-  width: "100vw",
-  height: "100vh",
-};
-
-const useGeolocation = (defaultCenter, defaultZoom) => {
-  const [mapCenter, setMapCenter] = useState(defaultCenter);
-  const [zoomLevel, setZoomLevel] = useState(defaultZoom);
+const Home = () => {
   const dispatch = useDispatch();
+  const { drawerState, openDrawer, closeDrawer } = useContext(DrawerContext);
+  const [drawingMode, setDrawingMode] = useState(null);
+  const { messages, addMessage, visiblePopupMessages, showAlert } =
+    useContext(ChatContext);
+
+  const currentProvider = useSelector(
+    (state) => state.provider.currentProvider
+  );
+  const providers = useSelector((state) => state.provider.providers);
+  const [feedMessages, setFeedMessages] = useState([]);
+  const { mapCenter, zoomLevel } = useGeolocation({}, 10);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -71,104 +75,67 @@ const useGeolocation = (defaultCenter, defaultZoom) => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setMapCenter({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
+    if (drawingMode == null) {
+      getProviders(currentProvider).then((data) => {
+        const providers = data.map((provider) => ({
+          ...provider,
+          geopoint: {
+            latitude: provider?.geopoint?.latitude,
+            longitude: provider?.geopoint?.longitude,
+          },
+        }));
+        if (!mapCenter?.lat && !mapCenter?.lng) {
+          dispatch(setProviders(providers));
+        } else {
+          let allProviders = providers.map((provider) => {
+            const providerData = provider;
+            const providerLocation = providerData.geopoint;
+
+            const hasValidLocation =
+              providerLocation &&
+              providerLocation.latitude != null &&
+              providerLocation.longitude != null;
+
+            const distance =
+              mapCenter?.lat && mapCenter?.lng && hasValidLocation
+                ? calculateDistance(
+                    mapCenter.lat,
+                    mapCenter.lng,
+                    providerLocation.latitude,
+                    providerLocation.longitude
+                  )
+                : -1;
+            return {
+              ...providerData,
+              distance: parseFloat(distance.toFixed(2)),
+            };
           });
-          setZoomLevel(15);
-        },
-        (error) => {
-          console.error("Error getting location: " + error.message);
+          dispatch(setProviders(allProviders));
         }
-      );
-    } else {
-      console.error("Geolocation is not supported by this browser.");
-    }
-  }, []);
-
-  return { mapCenter, zoomLevel };
-};
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-
-const Home = () => {
-  const dispatch = useDispatch();
-  const { drawerState, openDrawer, closeDrawer } = useContext(DrawerContext);
-  const {
-    messages,
-    addMessage,
-    unreadCount,
-    visiblePopupMessages,
-    showAlert,
-    setMessages,
-  } = useContext(ChatContext);
-
-  const currentProvider = useSelector(
-    (state) => state.provider.currentProvider
-  );
-  const [feedMessages, setFeedMessages] = useState([]);
-  useEffect(() => {
-    getProviders(currentProvider).then((data) => {
-      const serializedData = data.map((provider) => ({
-        ...provider,
-        geopoint: {
-          latitude: provider.geopoint.latitude,
-          longitude: provider.geopoint.longitude,
-        },
-      }));
-
-      // Dispatch the action with serialized data
-      dispatch(setProviders(serializedData));
-      // dispatch(setProviders(data));
-    });
-  }, [currentProvider]);
-
-  const { mapCenter, zoomLevel } = useGeolocation(
-    { lat: -3.745, lng: -38.523 },
-    10
-  );
+      });
+    } 
+  }, [mapCenter, currentProvider, drawingMode]);
 
   const handleNewMessage = (msg) => {
     setFeedMessages((prevMessages) => [...prevMessages, msg]);
     addMessage(msg);
   };
-
-  const handleResultsClick = (filteredProviders) => {
-    openDrawer("searchDrawer", filteredProviders);
-  };
+  useOnlineStatus(currentProvider?.id);
   return (
-    <LoadScript
-      googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
-      libraries={libraries}
-    >
+    <>
       <div className="flex flex-row">
         <NavBar />
-        <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={mapCenter}
-          zoom={zoomLevel}
-          options={{
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false,
-          }}
-        >
-          {/* <MapOverlay
-              providers={providers}
-              skills={skills}
-              messages={messages}
-              unreadCount={unreadCount}
-            /> */}
-
-          {/* <Markers providers={providers} /> */}
-          <SearchBar
-            skills={[]}
-            onResultsClick={handleResultsClick}
-            providers={[]}
-          />
-        </GoogleMap>
+        <MapComponent
+          providers={providers}
+          mapCenter={mapCenter}
+          drawingMode={drawingMode}
+          setDrawingMode={setDrawingMode}
+          zoom={10}
+          handleMarkerClick={(provider) =>
+            openDrawer("providerDrawer", provider)
+          }
+          libraries={libraries}
+        />
         <div className="w-[45%] mt-24 scrollable-featured-providers">
           <FeaturedProviders />
         </div>
@@ -182,14 +149,16 @@ const Home = () => {
       )}
 
       {drawerState.chatDrawer.isOpen && (
-        <Elements stripe={stripePromise}><ChatPage
-          provider={drawerState.chatDrawer.selectedProvider}
-          thread={drawerState.chatDrawer.thread}
-          isOpen={drawerState.chatDrawer.isOpen}
-          onClose={() => closeDrawer("chatDrawer")}
-          messages={messages}
-          addMessage={handleNewMessage}
-        /></Elements>
+        <Elements stripe={stripePromise}>
+          <ChatPage
+            provider={drawerState.chatDrawer.selectedProvider}
+            thread={drawerState.chatDrawer.thread}
+            isOpen={drawerState.chatDrawer.isOpen}
+            onClose={() => closeDrawer("chatDrawer")}
+            messages={messages}
+            addMessage={handleNewMessage}
+          />
+        </Elements>
       )}
       {drawerState.loginDrawer.isOpen && (
         <LoginSignupDrawer
@@ -225,7 +194,7 @@ const Home = () => {
           onClose={() => closeDrawer("becomeProvider")}
         />
       )}
-    </LoadScript>
+    </>
   );
 };
 
@@ -303,17 +272,24 @@ const MapOverlay = ({
   );
 };
 
-const Markers = ({ providers }) => (
-  <>
-    {providers.map((provider) => (
-      <Marker
-        key={provider.id}
-        position={{ lat: provider.latitude, lng: provider.longitude }}
-        onClick={() => handleMarkerClick(provider)}
-      />
-    ))}
-  </>
-);
+// const Markers = ({ providers }) => {
+//   console.log(providers);
+
+//   return (
+//     <>
+//       {providers.map((provider) => (
+//         <Marker
+//           key={provider.id}
+//           position={{
+//             lat: provider?.geopoint?.latitude,
+//             lng: provider?.geopoint.longitude,
+//           }}
+//           onClick={() => handleMarkerClick(provider)}
+//         />
+//       ))}
+//     </>
+//   );
+// }
 
 const HomeWithProvider = () => (
   <AuthProvider>

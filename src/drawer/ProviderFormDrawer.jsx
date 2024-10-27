@@ -65,21 +65,14 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
   const handleLocationChange = async (place) => {
     showLoading(true);
     if (place && place.value && place.value.place_id) {
-      const location = await getPlaceDetails(place.value.place_id);
+      const { lat, lng } = await getPlaceDetails(place.value.place_id);
       hideLoading(true);
-      console.log(location);
-      
-      // handleChange("location", place?.label);
       setFormData((prev) => ({ ...prev, ["location"]: place?.label }));
-      console.log(new GeoPoint(location.lat, location.lng));
+      console.log(lat, lng);
       setFormData((prev) => ({
         ...prev,
-        ["geopoint"]: new GeoPoint(location.lat, location.lng),
+        ["geopoint"]: new GeoPoint(lat, lng),
       }));
-
-      // handleChange("geopoint", new GeoPoint(location.lat, location.lng));
-    } else {
-      // handleChange("location", { lat: null, lng: null });
     }
   };
 
@@ -311,26 +304,30 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
           <option value="perHour">Per Hour</option>
           <option value="fixed">Fixed Price</option>
         </select>
-        <label
-          className="block text-gray-700 text-sm font-bold mb-2"
-          htmlFor={`price-${service.value}`}
-        >
-          {service.label}{" "}
-          {service.priceType === "perHour" ? "Price Per Hour" : "Fixed Price"}
-        </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id={`price-${service.value}`}
-          name={`price-${service.value}`}
-          type="text"
-          value={service.price}
-          onChange={(e) => {
-            const newServices = [...formData.services];
-            newServices[index].price = e.target.value;
-            setFormData({ ...formData, services: newServices });
-          }}
-          required
-        />
+
+        {service?.priceType === "fixed" && (
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor={`price-${service.value}`}
+            >
+              {service.label} Price
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              id={`price-${service.value}`}
+              name={`price-${service.value}`}
+              type="number"
+              value={service.price}
+              onChange={(e) => {
+                const newServices = [...formData.services];
+                newServices[index].price = e.target.value;
+                setFormData({ ...formData, services: newServices });
+              }}
+              required
+            />
+          </div>
+        )}
 
         {service.availability.length > 0 && (
           <div className="m-4">
@@ -341,7 +338,7 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
                   className="bg-primary text-white px-2 py-1 rounded-full flex items-center"
                 >
                   <span>
-                    {avail.day}:{" "}
+                    {avail.day}{" "}
                     {avail.slots
                       .map((slot) => `${slot.from} - ${slot.to}`)
                       .join(", ")}
@@ -395,75 +392,99 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
                   </option>
                 ))}
             </select>
-            <button
-              type="button"
-              className="bg-primary text-white px-4 py-2 rounded mt-2 mb-2"
-              onClick={() => handleAddTimeSlot(index)}
-            >
-              Add Time Slot
-            </button>
+            {service?.priceType === "perHour" && (
+              <button
+                type="button"
+                className="bg-primary text-white px-4 py-2 rounded mt-2 mb-2"
+                onClick={() => handleAddTimeSlot(index)}
+              >
+                Add Time Slot
+              </button>
+            )}
+            {currentAvailability[index]?.day &&
+              service?.priceType === "perHour" && (
+                <>
+                  {currentAvailability[index].slots.map((slot, slotIndex) => (
+                    <div key={slotIndex} className="flex items-center mb-2">
+                      <TimePicker
+                        className="w-full"
+                        use12Hours
+                        format="h:mm a"
+                        placeholder="From"
+                        value={slot.from ? moment(slot.from, "h:mm a") : null}
+                        onChange={(time, timeString) => {
+                          const newSlots = [
+                            ...currentAvailability[index].slots,
+                          ];
+                          newSlots[slotIndex].from = timeString;
+                          setCurrentAvailability({
+                            ...currentAvailability,
+                            [index]: {
+                              ...currentAvailability[index],
+                              slots: newSlots,
+                            },
+                          });
+                        }}
+                      />
+                      <span className="mx-2">to</span>
+                      <TimePicker
+                        className="w-full"
+                        use12Hours
+                        format="h:mm a"
+                        placeholder="To"
+                        value={slot.to ? moment(slot.to, "h:mm a") : null}
+                        onChange={(time, timeString) => {
+                          const newSlots = [
+                            ...currentAvailability[index].slots,
+                          ];
+                          newSlots[slotIndex].to = timeString;
+                          setCurrentAvailability({
+                            ...currentAvailability,
+                            [index]: {
+                              ...currentAvailability[index],
+                              slots: newSlots,
+                            },
+                          });
+                        }}
+                      />
+                      <div className="flex items-center  border rounded ml-2">
+                        <span className="py-1 px-4 bg-gray-200">$</span>
+                        <input
+                          type="number"
+                          className="px-2 py-1"
+                          placeholder="Cost"
+                          value={slot.cost || ""}
+                          onChange={(e) => {
+                            const newSlots = [
+                              ...currentAvailability[serviceIndex].slots,
+                            ];
+                            newSlots[index].cost = e.target.value;
+                            const newAvailability = [...currentAvailability];
+                            newAvailability[serviceIndex].slots = newSlots;
+                            setCurrentAvailability(newAvailability);
+                          }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="bg-red-500 text-white px-2 py-1 rounded ml-2"
+                        onClick={() => handleRemoveTimeSlot(index, slotIndex)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
             {currentAvailability[index]?.day && (
-              <>
-                {currentAvailability[index].slots.map((slot, slotIndex) => (
-                  <div key={slotIndex} className="flex items-center mb-2">
-                    <TimePicker
-                      className="w-full"
-                      use12Hours
-                      format="h:mm a"
-                      placeholder="From"
-                      value={slot.from ? moment(slot.from, "h:mm a") : null}
-                      onChange={(time, timeString) => {
-                        const newSlots = [...currentAvailability[index].slots];
-                        newSlots[slotIndex].from = timeString;
-                        setCurrentAvailability({
-                          ...currentAvailability,
-                          [index]: {
-                            ...currentAvailability[index],
-                            slots: newSlots,
-                          },
-                        });
-                      }}
-                    />
-                    <span className="mx-2">to</span>
-                    <TimePicker
-                      className="w-full"
-                      use12Hours
-                      format="h:mm a"
-                      placeholder="To"
-                      value={slot.to ? moment(slot.to, "h:mm a") : null}
-                      onChange={(time, timeString) => {
-                        const newSlots = [...currentAvailability[index].slots];
-                        newSlots[slotIndex].to = timeString;
-                        setCurrentAvailability({
-                          ...currentAvailability,
-                          [index]: {
-                            ...currentAvailability[index],
-                            slots: newSlots,
-                          },
-                        });
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="bg-red-500 text-white px-2 py-1 rounded ml-2"
-                      onClick={() => handleRemoveTimeSlot(index, slotIndex)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="bg-primary text-white px-4 py-2 rounded mt-2"
-                  onClick={() => handleSaveAvailability(index)}
-                  disabled={
-                    !currentAvailability[index]?.slots[0]?.from ||
-                    !currentAvailability[index]?.slots[0]?.to
-                  }
-                >
-                  Save Availability
-                </button>
-              </>
+              <button
+                type="button"
+                className="bg-primary text-white px-4 py-2 rounded mt-2"
+                onClick={() => handleSaveAvailability(index)}
+              >
+                Save Availability
+              </button>
             )}
           </>
         )}
@@ -471,7 +492,6 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
     );
   };
 
-  
   const renderServicesAndAvailability = () => (
     <div>
       <h2 className="text-xl font-bold mb-4">Services / Availability</h2>
