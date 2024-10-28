@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { FaStar, FaRegStar } from "react-icons/fa";
 
-const PaginatedReviews = ({ reviews, reviewsPerPage = 5 }) => {
+const Reviews = ({ reviews, reviewsPerPage = 5 }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Calculate total pages
@@ -69,4 +69,4 @@ const PaginatedReviews = ({ reviews, reviewsPerPage = 5 }) => {
   );
 };
 
-export default PaginatedReviews;
+export default Reviews;

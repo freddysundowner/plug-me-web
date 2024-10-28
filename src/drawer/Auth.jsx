@@ -1,18 +1,21 @@
 // src/LoginSignupDrawer.js
 import React, { useContext, useState } from "react";
 import Drawer from "./Drawer";
-import { signIn, signUp } from "../auth/auth"; // Import the auth functions
 import ChatContext from "../context/ChatContext";
-import { getErrorMessage } from "../auth/errorMessages";
+import { getErrorMessage } from "../init/errorMessages";
+import { useSignIn, useSignUp } from "../hooks/authHooks";
 
-const LoginSignupDrawer = ({ isOpen, onClose, type }) => {
+const Auth = ({ isOpen, onClose, type }) => {
   const [isLogin, setIsLogin] = useState(type == "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [username, setUsername] = useState("");
-  const { setShowAlert } = useContext(ChatContext); 
+  const { setShowAlert } = useContext(ChatContext);
+
+  const { signIn, error: signInError } = useSignIn();
+  const { signUp, error: signUpError } = useSignUp();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -24,16 +27,16 @@ const LoginSignupDrawer = ({ isOpen, onClose, type }) => {
         await signIn(email, password);
         setShowAlert({ show: true, error: false, message: "Login successful" });
       } else {
-        await signUp(email, password, username);
+        signUp(email, password, username);
         setShowAlert({
           show: true,
           error: false,
           message: "Signup successful",
         });
       }
-      onClose(); // Close the drawer on successful login/signup
+      onClose();
     } catch (err) {
-      const userFriendlyMessage = getErrorMessage(err.code); // Get the user-friendly error message
+      const userFriendlyMessage = getErrorMessage(err.code);
       setError(userFriendlyMessage);
       setShowAlert({ show: true, error: true, message: userFriendlyMessage });
     } finally {
@@ -103,7 +106,12 @@ const LoginSignupDrawer = ({ isOpen, onClose, type }) => {
               required
             />
           </div>
-          {error && <p className="text-red-500 text-xs italic">{error}</p>}
+          {signInError && (
+            <p className="text-red-500 text-xs italic">{signInError}</p>
+          )}
+          {signUpError && (
+            <p className="text-red-500 text-xs italic">{signUpError}</p>
+          )}
           <div className="flex items-center justify-between">
             <button
               className="bg-primary hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
@@ -153,4 +161,4 @@ const LoginSignupDrawer = ({ isOpen, onClose, type }) => {
   );
 };
 
-export default LoginSignupDrawer;
+export default Auth;

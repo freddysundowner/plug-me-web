@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { updateProvider } from "../../redux/features/providerSlice";
 import { updateProviderData } from "../../services/firebaseService";
 import { useAuth } from "../../context/AuthContext";
+import useFormData from "../../hooks/useFormData";
 
 const ContactInfo = () => {
   const dispatch = useDispatch();
@@ -11,18 +12,13 @@ const ContactInfo = () => {
 
   const provider = useSelector((state) => state.provider.currentProvider);
 
-  const [formData, setFormData] = useState({
+  const { formData, handleChange } = useFormData({
     ...provider,
     email: currentUser?.email,
   });
 
-  const handleChange = (key, value) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
-    console.log(formData);
     setSaving(true);
     await updateProviderData(formData.id, formData);
     dispatch(updateProvider(formData));

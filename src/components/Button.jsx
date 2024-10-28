@@ -1,5 +1,5 @@
 import { useLoading } from "../context/LoadingContext";
-import Loading from "./loading";
+import Loading from "../sharable/Loading";
 
 const Button = ({ callback, text, background = "bg-green-500", icon }) => {
   const { loading } = useLoading();

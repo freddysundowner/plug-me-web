@@ -31,7 +31,7 @@ export const ChatProvider = ({ children }) => {
     show: false,
     message: "All fields are require",
     error: true,
-  });
+  }); //TO BE REMOVED
   const [price, setPrice] = useState("");
   const [serviceName, setServiceName] = useState(null);
   const [date, setDate] = useState(Date.now());

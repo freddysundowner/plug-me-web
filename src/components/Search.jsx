@@ -6,7 +6,7 @@ import { AiOutlineSearch } from "react-icons/ai";
 import { FiNavigation, FiSliders, FiEdit3 } from "react-icons/fi";
 
 import "rc-slider/assets/index.css";
-import Switch from "../sharable/Switch";
+import Switch from "../components/Switch";
 import { useAuth } from "../context/AuthContext";
 import { useSelector } from "react-redux";
 import { updateProviderData } from "../services/firebaseService";

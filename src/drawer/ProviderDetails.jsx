@@ -1,25 +1,20 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FaUserCircle,
   FaMapMarkerAlt,
   FaCircle,
-  FaCalendar,
   FaRegStar,
   FaStar,
-  FaRocketchat,
 } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
 
 import AvailabilityCalendar from "../components/AvailabilityCalendar";
 import Drawer from "./Drawer";
-import DrawerContext from "../context/DrawerContext";
 import Socialicons from "../sharable/Socialicons";
-import WorkHistory from "../sharable/WorkHistory";
-import Rating from "../sharable/Rating";
-import { useAuth } from "../context/AuthContext";
+import WorkHistory from "../components/WorkHistory";
+import Rating from "../components/Rating";
 import { CurrencyFormatter } from "../utils/dateFormat";
 import { getInvoice, getUserRatings } from "../services/firebaseService";
-import PaginatedReviews from "../components/PaginatedReviews";
 
 const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
   if (!isOpen) return null;

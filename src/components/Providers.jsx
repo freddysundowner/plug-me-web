@@ -1,10 +1,9 @@
-// FeaturedProviders.js
 import React from "react";
 import ProviderCard from "../cards/Provider"; // Import the ProviderCard component
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { useSelector } from "react-redux";
-const FeaturedProviders = () => {
+const Providers = () => {
   const providers = useSelector((state) => state.provider.providers);
 
   return (
@@ -26,4 +25,4 @@ const FeaturedProviders = () => {
   );
 };
 
-export default FeaturedProviders;
+export default Providers;

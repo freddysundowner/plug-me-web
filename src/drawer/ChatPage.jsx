@@ -8,7 +8,7 @@ import {
 } from "react-icons/fa";
 import Drawer from "./Drawer"; // Import the reusable Drawer component
 import ChatContext from "../context/ChatContext"; // Import ChatContext
-import Quote from "../sharable/Quote";
+import Quote from "../modal/Quote";
 import Message from "../cards/Message";
 import { useSelector } from "react-redux";
 import {
@@ -19,12 +19,12 @@ import {
   addRating,
   updateMessageInFirestore,
 } from "../services/firebaseService";
-import Button from "../sharable/Button";
-import PaymentDrawer from "./stripePayment";
+import Button from "../components/Button";
+import PaymentDrawer from "./Payment";
 import { increment } from "firebase/firestore";
-import RatingModal from "../sharable/RateUser";
+import RatingModal from "../modal/RateUser";
 import { useGlobalContext } from "../context/GlobalContext";
-import AlertModal from "../sharable/AlertModal";
+import AlertModal from "../modal/AlertModal";
 const ChatPage = ({ provider, isOpen, onClose, thread }) => {
   const {
     messages,

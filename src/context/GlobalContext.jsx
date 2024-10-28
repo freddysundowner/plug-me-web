@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext } from "react";
-import Modal from "../sharable/Modal"; // Adjust the import path according to your project structure
-import AlertModal from "../sharable/AlertModal";
+import Modal from "../modal/AcceptRejectOffer"; // Adjust the import path according to your project structure
+import AlertModal from "../modal/AlertModal";
 
 const GlobalContext = createContext();
 

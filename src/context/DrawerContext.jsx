@@ -11,6 +11,7 @@ export const DrawerProvider = ({ children }) => {
     loginDrawer: { isOpen: false, selectedProvider: null, type: "login" },
     inboxDrawer: { isOpen: false, selectedProvider: null, messages: [] },
     becomeProvider: { isOpen: false, selectedProvider: null },
+    profile: { isOpen: false, selectedProvider: null },
   });
 
   // const openDrawer = useCallback(
@@ -59,6 +60,8 @@ export const DrawerProvider = ({ children }) => {
 
   const openDrawer = useCallback(
     (drawer, provider = null, messages = [], type = "login", thread) => {
+      console.log(drawer);
+      
       closeAllDrawers();
       updateDrawerState(drawer, {
         isOpen: true,

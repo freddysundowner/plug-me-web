@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "../auth/firebaseConfig";
+import { auth, db } from "../init/firebaseConfig";
 import { stripeAccountDetails } from '../services/httpClient';
 import { updateProviderData } from '../services/firebaseService';
 import { updateProvider } from '../redux/features/providerSlice';

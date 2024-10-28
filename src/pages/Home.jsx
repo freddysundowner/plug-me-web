@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Provider, useSelector, useDispatch } from "react-redux";
 import { store } from "../redux/store";
-import FeaturedProviders from "./FeaturedProviders";
-import Menu from "./Menu";
+import ProvidersList from "../components/Providers";
 import SearchResults from "../drawer/SearchResults";
 import DrawerContext, { DrawerProvider } from "../context/DrawerContext";
 import ProviderDetails from "../drawer/ProviderDetails";
@@ -10,12 +9,11 @@ import ChatPage from "../drawer/ChatPage";
 import ChatContext, { ChatProvider } from "../context/ChatContext";
 import NotificationIcon from "../sharable/NotificationIcon";
 import Chats from "../drawer/Inboxes";
-import MessageFeed from "../components/MessageFeed";
+import Messages from "../components/MessageFeed";
 import SnackMessage from "../sharable/SnackMessage";
 import { GlobalProvider } from "../context/GlobalContext";
-import Switch from "../sharable/Switch";
-import { AuthProvider, useAuth } from "../context/AuthContext";
-import LoginSignupDrawer from "../drawer/LoginSignupDrawer";
+import { AuthProvider } from "../context/AuthContext";
+import LoginSignupDrawer from "../drawer/Auth";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import {
@@ -24,15 +22,16 @@ import {
   setProviders,
 } from "../redux/features/providerSlice";
 import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "../auth/firebaseConfig";
+import { auth, db } from "../init/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
-import ProviderFormDrawer from "../drawer/ProviderFormDrawer";
-import NavBar from "./navbar";
+import ProviderFormDrawer from "../drawer/OnboardProvider";
+import NavBar from "../components/NavBar";
 import { calculateDistance, getProviders } from "../services/firebaseService";
 import { LoadingProvider } from "../context/LoadingContext";
 import useOnlineStatus from "../hooks/useOnlineStatus";
-import MapComponent from "./Map";
+import Map from "../components/Map";
 import useGeolocation from "../hooks/useGeolocation";
+import useAlert from "../hooks/useAlert";
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 const libraries = ["places", "drawing", "geometry", "marker"];
 
@@ -41,7 +40,9 @@ const Home = () => {
   const { drawerState, openDrawer, closeDrawer } = useContext(DrawerContext);
   const [drawingMode, setDrawingMode] = useState(null);
   const { messages, addMessage, visiblePopupMessages, showAlert } =
-    useContext(ChatContext);
+    useContext(ChatContext); //showAlert to be removed
+
+  const { alert } = useAlert();
 
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
@@ -113,7 +114,7 @@ const Home = () => {
           dispatch(setProviders(allProviders));
         }
       });
-    } 
+    }
   }, [mapCenter, currentProvider, drawingMode]);
 
   const handleNewMessage = (msg) => {
@@ -121,11 +122,12 @@ const Home = () => {
     addMessage(msg);
   };
   useOnlineStatus(currentProvider?.id);
+
   return (
     <>
       <div className="flex flex-row">
         <NavBar />
-        <MapComponent
+        <Map
           providers={providers}
           mapCenter={mapCenter}
           drawingMode={drawingMode}
@@ -137,7 +139,7 @@ const Home = () => {
           libraries={libraries}
         />
         <div className="w-[45%] mt-24 scrollable-featured-providers">
-          <FeaturedProviders />
+          <ProvidersList />
         </div>
       </div>
       {drawerState.searchDrawer.isOpen && (
@@ -147,7 +149,6 @@ const Home = () => {
           onClose={() => closeDrawer("searchDrawer")}
         />
       )}
-
       {drawerState.chatDrawer.isOpen && (
         <Elements stripe={stripePromise}>
           <ChatPage
@@ -168,7 +169,6 @@ const Home = () => {
           onClose={() => closeDrawer("loginDrawer")}
         />
       )}
-
       {drawerState.inboxDrawer.isOpen && (
         <Chats
           isOpen={drawerState.inboxDrawer.isOpen}
@@ -176,9 +176,10 @@ const Home = () => {
           provider={drawerState.inboxDrawer.selectedProvider}
         />
       )}
+      {alert.show && <SnackMessage message={alert.message} />}
       {showAlert.show && <SnackMessage message={showAlert.message} />}
       {visiblePopupMessages.length > 0 && !drawerState.chatDrawer.isOpen && (
-        <MessageFeed />
+        <Messages />
       )}
       {drawerState.providerDrawer.isOpen && (
         <ProviderDetails
@@ -197,99 +198,6 @@ const Home = () => {
     </>
   );
 };
-
-const MapOverlay = ({
-  providers,
-  skills,
-  onResultsClick,
-  messages,
-  unreadCount,
-}) => {
-  const [isAvailable, setIsAvailable] = useState(false);
-  const { currentUser } = useAuth();
-  const { drawerState, openDrawer, closeDrawer } = useContext(DrawerContext);
-  const currentProvider = useSelector(
-    (state) => state.provider.currentProvider
-  );
-
-  const handleBecomeProvider = async () => {
-    openDrawer("becomeProvider", currentProvider);
-  };
-
-  return (
-    <div className="">
-      <div className="absolute right-4 top-4 shadow-black shadow-2xl rounded-full ">
-        <div className="flex gap-4">
-          {currentUser ? (
-            <>
-              {currentProvider?.isProvider ? (
-                <Switch
-                  checked={isAvailable}
-                  onChange={handleAvailabilityChange}
-                />
-              ) : (
-                <button
-                  onClick={handleBecomeProvider}
-                  className="bg-primary text-white px-4 py-2 rounded"
-                >
-                  Become a Provider
-                </button>
-              )}
-              <Menu provider={providers[0]} />
-              <NotificationIcon
-                messages={messages}
-                unreadCount={unreadCount}
-                provider={providers[0]}
-              />
-            </>
-          ) : (
-            <>
-              <nav className="bg-primary p-4 rounded-2xl">
-                <ul className="flex space-x-4 text-white">
-                  <li>
-                    <a
-                      onClick={() => openDrawer("loginDrawer")}
-                      className="hover:text-gray-300 cursor-pointer"
-                    >
-                      Login
-                    </a>
-                  </li>
-                  <li className="border-l border-gray-400 pl-4">
-                    <a
-                      onClick={() => openDrawer("loginDrawer")}
-                      className="hover:text-gray-300 cursor-pointer"
-                    >
-                      Signup
-                    </a>
-                  </li>
-                </ul>
-              </nav>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// const Markers = ({ providers }) => {
-//   console.log(providers);
-
-//   return (
-//     <>
-//       {providers.map((provider) => (
-//         <Marker
-//           key={provider.id}
-//           position={{
-//             lat: provider?.geopoint?.latitude,
-//             lng: provider?.geopoint.longitude,
-//           }}
-//           onClick={() => handleMarkerClick(provider)}
-//         />
-//       ))}
-//     </>
-//   );
-// }
 
 const HomeWithProvider = () => (
   <AuthProvider>

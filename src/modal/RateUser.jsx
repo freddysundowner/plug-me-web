@@ -1,6 +1,6 @@
 import React, { useContext, useState } from "react";
 import PropTypes from "prop-types";
-import Loading from "./loading";
+import Loading from "../sharable/loading";
 import ChatContext from "../context/ChatContext";
 
 const RatingModal = ({ isOpen, onClose, onSubmit, loading, userType }) => {

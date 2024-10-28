@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
-// import { changePassword } from "../../redux/features/authSlice" // Assuming you have an authSlice for managing authentication
 
 const ChangePassword = () => {
-  const dispatch = useDispatch();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -15,7 +13,6 @@ const ChangePassword = () => {
       setError("New password and confirm password do not match");
       return;
     }
-    // dispatch(changePassword({ currentPassword, newPassword }));
   };
 
   return (

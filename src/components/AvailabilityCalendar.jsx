@@ -99,18 +99,24 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
     if (selectedService) {
       let message = "";
       if (selectedSlot) {
-         message = `Hi ${provider.username}, I would like to book you for ${selectedService.label
-          } at ${selectedSlot.from} - ${selectedSlot.to
-          } on ${date.toDateString()}\n. Kindly send me the quote.`;
+        message = `Hi ${provider.username}, I would like to book you for ${
+          selectedService.label
+        } at ${selectedSlot.from} - ${
+          selectedSlot.to
+        } on ${date.toDateString()}\n. Kindly send me the quote.`;
         if (finalQuote) {
-          message = `Can I book you for ${selectedService.label} at ${selectedSlot.from
-            } - ${selectedSlot.to} on ${date.toDateString()} for $${finalQuote}?`;
+          message = `Can I book you for ${selectedService.label} at ${
+            selectedSlot.from
+          } - ${selectedSlot.to} on ${date.toDateString()} for $${finalQuote}?`;
         }
       } else {
-         message = `Hi ${provider.username}, I would like to book you for ${selectedService.label
-          } on ${date.toDateString()}\n. Kindly send me the quote.`;
+        message = `Hi ${provider.username}, I would like to book you for ${
+          selectedService.label
+        } on ${date.toDateString()}\n. Kindly send me the quote.`;
         if (finalQuote) {
-          message = `Can I book you for ${selectedService.label} on ${date.toDateString()} for $${finalQuote}?`;
+          message = `Can I book you for ${
+            selectedService.label
+          } on ${date.toDateString()} for $${finalQuote}?`;
         }
       }
       const bookingMessage = {
@@ -256,7 +262,6 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
 
     return date < new Date(today) || !availableDates.has(formattedDate);
   };
-  console.log(date);
 
   return (
     <div className="py-4">
@@ -274,7 +279,7 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
         tileClassName="calendar-tile"
         tileDisabled={tileDisabled}
       />
-      {provider?.priceType == "perHour" && (
+      {slotsForDate && (
         <div className="mb-4">
           <h3
             className="text-lg font-semibold mb-2"
@@ -316,7 +321,7 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
             className="text-lg font-semibold mb-2"
             style={{ color: primaryColor }}
           >
-            Select an Offer (Optional):
+            Select an Offer :
           </h3>
           {selectedService?.priceType == "fixed" && (
             <ul className="flex flex-wrap gap-2 mb-2">
@@ -414,7 +419,8 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
         disabled={
           !selectedService ||
           (!selectedSlot && selectedService?.priceType == "perHour") ||
-          (selectedService?.priceType == "fixed" && !finalQuote || date == null)
+          (selectedService?.priceType == "fixed" && !finalQuote) ||
+          date == null
         }
         className="w-full px-4 py-2 bg-green-500 text-white rounded disabled:bg-gray-300"
       >

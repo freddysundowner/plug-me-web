@@ -5,15 +5,15 @@ import {
   DrawingManager,
 } from "@react-google-maps/api";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
-import SearchBar from "./SearchBar";
-import { db } from "../auth/firebaseConfig";
+import SearchBar from "./Search";
+import { db } from "../init/firebaseConfig";
 import { getDocs, collection } from "firebase/firestore";
 import { useDispatch } from "react-redux";
 import { useCallback } from "react";
 import { useRef } from "react";
 import DrawerContext from "../context/DrawerContext";
 
-const MapComponent = ({
+const Map = ({
   providers,
   mapCenter,
   zoom,
@@ -246,4 +246,4 @@ const MapComponent = ({
   );
 };
 
-export default MapComponent;
+export default Map;

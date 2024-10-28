@@ -1,11 +1,9 @@
-import { FaUserCircle } from "react-icons/fa";
-import { AiOutlineHome, AiOutlineStar } from "react-icons/ai";
+import { AiOutlineHome } from "react-icons/ai";
 import { FiMapPin } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import { useContext } from "react";
 import DrawerContext from "../context/DrawerContext";
 import Menu from "./Menu";
-import { useSelector } from "react-redux";
 const NavBar = () => {
   const { currentUser } = useAuth();
   const { openDrawer } = useContext(DrawerContext);

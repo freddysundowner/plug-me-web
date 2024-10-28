@@ -15,23 +15,6 @@ const AcceptRejectOffer = ({ title, children, isOpen, onClose }) => {
         <div className="flex gap-4">
           <button
             onClick={() => {
-              // let message = messages.filter((msg) => msg.id == id);
-              // if (message) {
-              //   const rejectionMessage = {
-              //     id: Date.now(),
-              //     sender: "System",
-              //     text: `Booking rejected.`,
-              //     timestamp: new Date().toLocaleTimeString(),
-              //     type: "info",
-              //   };
-              //   addMessage(rejectionMessage);
-              //   setMessages((prevMessages) =>
-              //     prevMessages.map((msg) =>
-              //       msg.id === id ? { ...msg, status: "rejected" } : msg
-              //     )
-              //   );
-              // }
-              // closeModal();
             }}
             className="px-4 py-2 bg-red-500 text-white rounded-md"
           >

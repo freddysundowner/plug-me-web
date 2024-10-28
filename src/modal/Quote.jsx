@@ -2,12 +2,12 @@ import { useContext, useEffect, useState } from "react";
 import ChatContext from "../context/ChatContext";
 import Select from "react-select";
 import { FaTimes, FaCheck } from "react-icons/fa";
-import Loading from "./loading";
-import Button from "./Button";
+import Loading from "../sharable/loading";
+import Button from "../components/Button";
 import { useSelector } from "react-redux";
 import { TimePicker } from "antd";
 import moment from "moment"; // Import moment for handling time
-import CustomDatePicker from "./DatePicker";
+import CustomDatePicker from "../sharable/DatePicker";
 
 const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
   const {
@@ -167,14 +167,16 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
           <Button
             callback={() => {
               if (quotemessage?.type == "request") {
-                setQuoteMessage({ ...quotemessage, quote: quotemessage.quote })
+                setQuoteMessage({ ...quotemessage, quote: quotemessage.quote });
                 handleSendQuote("update");
               } else {
                 handleSendQuote();
               }
             }}
             loading={loading}
-            text={quotemessage?.type == "request" ? "Confirm Quote" : "Send Quote"}
+            text={
+              quotemessage?.type == "request" ? "Confirm Quote" : "Send Quote"
+            }
           />
         </div>
       </div>

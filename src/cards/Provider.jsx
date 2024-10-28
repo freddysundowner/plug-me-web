@@ -78,14 +78,6 @@ const Provider = ({ provider }) => {
       </div>
 
       <div className="">
-        {/* <div className="flex justify-center mt-4"> */}
-        {/* <button className="mr-2 px-10 py-2 bg-primary text-white rounded-md shadow-md text-sm">
-            Hire
-          </button> */}
-        {/* <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md shadow-md text-sm">
-            Message
-          </button> */}
-        {/* </div> */}
         <div className="flex justify-center mt-4">
           <a
             href={`https://wa.me/${provider.whatsapp}`}

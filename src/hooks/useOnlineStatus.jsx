@@ -1,7 +1,7 @@
 // useOnlineStatus.js
 import { useEffect } from "react";
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "../auth/firebaseConfig";
+import { db } from "../init/firebaseConfig";
 
 const useOnlineStatus = (userId) => {
   useEffect(() => {

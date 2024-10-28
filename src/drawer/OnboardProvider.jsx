@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import Drawer from "./Drawer"; // Import the reusable Drawer component
 import { useDispatch } from "react-redux";
 import { doc, updateDoc, getDocs, collection } from "firebase/firestore";
-import { db, auth } from "../auth/firebaseConfig";
+import { db, auth } from "../init/firebaseConfig";
 import { setProvider } from "../redux/features/providerSlice";
 import Select from "react-select";
 import { GeoPoint } from "firebase/firestore";
@@ -17,7 +17,8 @@ import { useLoading } from "../context/LoadingContext";
 import { updateProviderData } from "../services/firebaseService";
 import ChatContext from "../context/ChatContext";
 
-const ProviderFormDrawer = ({ isOpen, onClose }) => {
+const OnboardProvider
+ = ({ isOpen, onClose }) => {
   const { loading, showLoading, hideLoading } = useLoading();
   const { setShowAlert } = useContext(ChatContext); // Use ChatContext
 
@@ -634,4 +635,5 @@ const ProviderFormDrawer = ({ isOpen, onClose }) => {
   );
 };
 
-export default ProviderFormDrawer;
+export default OnboardProvider
+;

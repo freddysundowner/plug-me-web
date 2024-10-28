@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import ChatContext from "../context/ChatContext"; // Import ChatContext
 import { FaTimes } from "react-icons/fa";
 
-const MessageFeed = () => {
+const Messages = () => {
   const { visiblePopupMessages, setVisiblePopupMessages } =
     useContext(ChatContext);
 
@@ -33,4 +33,4 @@ const MessageFeed = () => {
   );
 };
 
-export default MessageFeed;
+export default Messages;

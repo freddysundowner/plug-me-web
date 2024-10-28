@@ -2,26 +2,28 @@ import React, { useEffect, useState } from "react";
 import BalanceCard from "../../cards/BalanceCard";
 import { getTransactions } from "../../services/firebaseService";
 import { useSelector } from "react-redux";
-import {
-  CurrencyFormatter,
-  dateFormat,
-  DateTimeDisplay,
-} from "../../utils/dateFormat";
+import { CurrencyFormatter, DateTimeDisplay } from "../../utils/dateFormat";
+import { useLoading } from "../../context/LoadingContext";
 
 const Transactions = () => {
+  const { showLoading, hideLoading } = useLoading();
+
   const [transactions, setTransactions] = useState([]);
+  const [refreshTransactions, setRefreshTransactions] = useState(false);
   const currentProvider = useSelector(
     (state) => state.provider.currentProvider
   );
   useEffect(() => {
+    showLoading();
     getTransactions(currentProvider?.id).then((transactions) => {
       setTransactions(transactions);
+      hideLoading();
     });
-  }, []);
+  }, [refreshTransactions]);
 
   return (
     <div className="overflow-x-auto">
-      <BalanceCard />
+      <BalanceCard setRefreshTransactions={setRefreshTransactions} />
       {transactions.length == 0 ? (
         <h2>No Transactions</h2>
       ) : (

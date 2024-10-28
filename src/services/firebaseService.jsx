@@ -13,18 +13,18 @@ import {
   getDoc,
   increment,
 } from "firebase/firestore";
-import { db } from "../auth/firebaseConfig";
+import { db } from "../init/firebaseConfig";
 
 export const fetchServices = async () => {
   const querySnapshot = await getDocs(collection(db, "services"));
   const servicesList = querySnapshot.docs.map((doc) => ({
     value: doc.id,
-    label: doc.data().label,
+    label: doc.data().name,
   }));
+
   return servicesList;
 };
 export const updateProviderAvailability = async (userId, services) => {
-  console.log(userId, services);
   const userDocRef = doc(db, "users", userId);
   await updateDoc(userDocRef, { services });
 };

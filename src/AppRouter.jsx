@@ -1,8 +1,8 @@
 // AppRouter.jsx
 import React from "react";
 import { BrowserRouter as Router, Route, Routes, } from "react-router-dom";
-import Home from "./components/Home";
-import OnboardingComplete from './components/onboarding';
+import Home from "./pages/Home";
+import OnboardingComplete from './pages/Onboarding';
 import { Provider } from 'react-redux';
 import { store } from "./redux/store";
 const AppRouter = () => {
