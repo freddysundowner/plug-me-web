@@ -42,7 +42,6 @@ const Payment = ({ isOpen, onClose, threadId, payInvoice }) => {
       const amount = invoice?.quote;
       const response = await stripeIntent({ amount });
       //
-      console.log(response);
       const { clientSecret } = response;
       const cardElement = elements.getElement(CardElement);
 
@@ -60,7 +59,6 @@ const Payment = ({ isOpen, onClose, threadId, payInvoice }) => {
         setLoading(false);
         return;
       }
-      console.log(paymentIntent);
 
       if (paymentIntent.status === "succeeded") {
         await payInvoice(threadId);
@@ -68,7 +66,6 @@ const Payment = ({ isOpen, onClose, threadId, payInvoice }) => {
         setLoading(false);
       }
     } catch (error) {
-      console.log(error);
       setError("Error processing payment");
       setLoading(false);
     }

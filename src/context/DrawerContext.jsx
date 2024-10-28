@@ -60,7 +60,6 @@ export const DrawerProvider = ({ children }) => {
 
   const openDrawer = useCallback(
     (drawer, provider = null, messages = [], type = "login", thread) => {
-      console.log(drawer);
       
       closeAllDrawers();
       updateDrawerState(drawer, {

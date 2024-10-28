@@ -11,7 +11,6 @@ const providerSlice = createSlice({
   initialState,
   reducers: {
     updateProvider: (state, action) => {
-      console.log("updating", action.payload);
       state.currentProvider = action.payload;
     },
     setProvider: (state, action) => {

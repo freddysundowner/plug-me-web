@@ -92,17 +92,15 @@ const Map = ({
             // Ensure map is loaded and accessible
             map.panTo({ lat: latitude, lng: longitude });
             map.setZoom(15);
-          } else {
-            console.log("Map is not initialized.");
           }
         },
         (error) => {
-          console.log("Error getting current location:", error);
+          console.error("Error getting current location:", error);
         },
         { timeout: 10000, enableHighAccuracy: true }
       );
     } else {
-      console.log("Geolocation is not supported by this browser.");
+      console.error("Geolocation is not supported by this browser.");
     }
   };
 
@@ -184,10 +182,8 @@ const Map = ({
     return () => {
       // Cleanup previous shape if the component is unmounted
       if (drawnShape) {
-        console.log("Cleaning up shape on unmount");
         drawnShape.setMap(null);
       }
-      console.log("drawingMode ", drawingMode);
     };
   }, [drawnShape, drawingMode]);
   if (!isLoaded) return <p>Loading...</p>;

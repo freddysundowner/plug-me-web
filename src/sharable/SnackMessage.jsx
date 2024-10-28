@@ -16,7 +16,6 @@ const SnackMessage = ({ message, duration = 3000, onClose }) => {
       return () => clearTimeout(timer);
     }
   }, [message, duration, onClose, setShowAlert]);
-  console.log("error ", showAlert.error);
 
   return (
     showAlert.show && (

@@ -82,7 +82,6 @@ app.post("/paypal/capture-order", async (req, res) => {
 });
 app.post("/stripe/create-connected-account", async (req, res) => {
   const { email } = req.body;
-  console.log();
   try {
     const account = await stripe.accounts.create({
       type: "express",
@@ -150,7 +149,6 @@ app.post("/stripe/create-payout", async (req, res) => {
 }); 
 app.get("/place-details", async (req, res) => {
   const placeId = req.query.placeId;
-  console.log(placeId);
   
   if (!placeId) {
     return res.status(400).json({ error: "Place ID is required" });

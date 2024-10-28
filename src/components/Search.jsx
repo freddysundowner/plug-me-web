@@ -22,9 +22,7 @@ const SearchBar = ({
 }) => {
   const [filteredSkills, setFilteredSkills] = useState([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [priceRange, setPriceRange] = useState([0, 50]);
   const [distanceRange, setDistanceRange] = useState(100);
-  const [service, setService] = useState("");
   const [selectedDay, setSelectedDay] = useState(null);
   const [query, setQuery] = useState({});
 
@@ -49,7 +47,6 @@ const SearchBar = ({
                 service.availability.some((day) => day.day === selectedDay)
             )
           : true;
-      console.log(distanceRange, query, selectedDay);
 
       const matchesDistance = distanceRange
         ? provider.distance <= distanceRange
@@ -87,10 +84,6 @@ const SearchBar = ({
     return results.length;
   };
 
-  const handleClear = () => {
-    setQuery("");
-    setFilteredSkills([]);
-  };
 
   const toggleFilter = () => {
     setIsFilterOpen(!isFilterOpen);
@@ -153,13 +146,6 @@ const SearchBar = ({
                   }),
                 },
               }}
-              autocompletionRequest={
-                {
-                  // componentRestrictions: {
-                  //   country: "fr",
-                  // },
-                }
-              }
             />
           </div>
         </div>
@@ -197,12 +183,6 @@ const SearchBar = ({
       </div>
       {isFilterOpen && (
         <div className="absolute top-full mt-2 w-full max-w-xl bg-white border rounded shadow-lg z-10 p-4">
-          {/* <div className="mb-4">
-            <label className="block text-gray-700">
-              Earnings: ${priceRange[0]} - ${priceRange[1]}
-            </label>
-            <Slider range value={priceRange} onChange={setPriceRange} />
-          </div> */}
           <div className="mb-4">
             <label className="block text-gray-700">
               Distance Range: {distanceRange} miles

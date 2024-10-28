@@ -253,7 +253,6 @@ export const getTransactions = async (userId) => {
   return allTransactions;
 };
 export const addMessageToFirestore = async (message) => {
-  console.log(message);
 
   try {
     let threadId = await getThreadId(
@@ -305,8 +304,6 @@ export const listenForUserAccountChanges = (userId, callback) => {
     if (docSnapshot.exists()) {
       const userData = docSnapshot.data();
       callback(userData);
-    } else {
-      console.log("No such document!");
     }
   });
   return () => unsubscribe();
@@ -410,7 +407,6 @@ export const logoutFirebase = async (userId, status) => {
 };
 
 export const getUserRatings = async (userId) => {
-  console.log("getting ratings", userId);
 
   const ratingsQuery = query(collection(db, "users", userId, "ratings"));
   const ratingsSnapshot = await getDocs(ratingsQuery);

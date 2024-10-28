@@ -69,7 +69,6 @@ const OnboardProvider
       const { lat, lng } = await getPlaceDetails(place.value.place_id);
       hideLoading(true);
       setFormData((prev) => ({ ...prev, ["location"]: place?.label }));
-      console.log(lat, lng);
       setFormData((prev) => ({
         ...prev,
         ["geopoint"]: new GeoPoint(lat, lng),

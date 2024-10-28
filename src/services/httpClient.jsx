@@ -58,7 +58,6 @@ export const getPlaceDetails = async (placeId) => {
   const response = await apiClient.get("/place-details", {
     params: { placeId },
   });
-  console.log(response.data);
   return response.data?.geometry?.location;
 };
 

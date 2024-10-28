@@ -41,7 +41,6 @@ const Quote = ({ provider, primaryColor = "#5e60b9" }) => {
     setDuration(quotemessage?.duration);
     setDurationUnit(quotemessage?.durationUnit);
   }, [quotemessage]);
-  console.log(quotemessage);
   useEffect(() => {
     setQuoteMessage({
       ...quotemessage,

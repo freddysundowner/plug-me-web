@@ -21,7 +21,6 @@ const usePayout = (setRefreshTransactions) => {
 
   const createPayout = async (amount) => {
     if (currentProvider?.balance < amount) {
-      console.log(currentProvider.balance, amount);
       setShowAlert({
         show: true,
         error: true,

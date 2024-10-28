@@ -48,7 +48,6 @@ export const ChatProvider = ({ children }) => {
   const generateReceipePDF = (title = "Receipt", thread = null) => {
     let newQuote = quotemessage;
     const doc = new jsPDF();
-    console.log(thread);
     if (thread != null) {
       const filteredMessages = messages.filter(
         (msg) =>
@@ -56,7 +55,6 @@ export const ChatProvider = ({ children }) => {
           msg?.type == "quote" &&
           msg.paid == true
       );
-      console.log(messages);
       newQuote = filteredMessages[0];
     }
 
@@ -221,7 +219,6 @@ export const ChatProvider = ({ children }) => {
         "currentInvoice.amount": amount,
       });
 
-      console.log("Payment successful and invoice marked as paid!");
       return { success: true };
       // }
     } catch (error) {
@@ -231,7 +228,6 @@ export const ChatProvider = ({ children }) => {
   };
 
   const handleSendQuote = async (type) => {
-    console.log(quotemessage);
     if (quotemessage.quote <= 0) {
       setShowAlert({
         show: true,

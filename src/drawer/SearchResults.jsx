@@ -9,7 +9,6 @@ const SearchResults = ({
   setProviderDrawerOpen,
   setSelectedProvider,
 }) => {
-  console.log("SearchResults", providers);
   
   return (
     <Drawer

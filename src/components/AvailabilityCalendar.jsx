@@ -55,7 +55,6 @@ const AvailabilityCalendar = ({ provider, primaryColor }) => {
 
   const calculateQuote = (service, slot) => {
     const { price, priceType } = service;
-    console.log(service);
 
     if (priceType === "perHour") {
       const fromTime = moment(slot.from, "h:mm a");

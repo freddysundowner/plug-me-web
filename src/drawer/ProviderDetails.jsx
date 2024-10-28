@@ -29,7 +29,6 @@ const ProviderDetailsDrawer = ({ provider, isOpen, onClose }) => {
       }
     });
     getInvoice(provider?.id).then((invoices) => {
-      console.log(invoices);
       
       setTasks(invoices);
     });
