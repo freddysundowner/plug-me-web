@@ -9,7 +9,7 @@ import ChatPage from "../drawer/ChatPage";
 import ChatContext, { ChatProvider } from "../context/ChatContext";
 import NotificationIcon from "../sharable/NotificationIcon";
 import Chats from "../drawer/Inboxes";
-import Messages from "../components/MessageFeed";
+import MessagesComponent from "../components/MessageFeed";
 import SnackMessage from "../sharable/SnackMessage";
 import { GlobalProvider } from "../context/GlobalContext";
 import { AuthProvider } from "../context/AuthContext";
@@ -127,19 +127,23 @@ const Home = () => {
     <>
       <div className="flex flex-row">
         <NavBar />
-        <Map
-          providers={providers}
-          mapCenter={mapCenter}
-          drawingMode={drawingMode}
-          setDrawingMode={setDrawingMode}
-          zoom={10}
-          handleMarkerClick={(provider) =>
-            openDrawer("providerDrawer", provider)
-          }
-          libraries={libraries}
-        />
-        <div className="w-[45%] mt-24 scrollable-featured-providers">
-          <ProvidersList />
+        <div className="flex flex-row w-full">
+          <div className="w-1/2">
+            <Map
+              providers={providers}
+              mapCenter={mapCenter}
+              drawingMode={drawingMode}
+              setDrawingMode={setDrawingMode}
+              zoom={10}
+              handleMarkerClick={(provider) =>
+                openDrawer("providerDrawer", provider)
+              }
+              libraries={libraries}
+            />
+          </div>
+          <div className="mt-24 scrollable-featured-providers w-1/2 lg:w-1/3">
+            <ProvidersList />
+          </div>
         </div>
       </div>
       {drawerState.searchDrawer.isOpen && (
@@ -179,7 +183,7 @@ const Home = () => {
       {alert.show && <SnackMessage message={alert.message} />}
       {showAlert.show && <SnackMessage message={showAlert.message} />}
       {visiblePopupMessages.length > 0 && !drawerState.chatDrawer.isOpen && (
-        <Messages />
+        <MessagesComponent />
       )}
       {drawerState.providerDrawer.isOpen && (
         <ProviderDetails

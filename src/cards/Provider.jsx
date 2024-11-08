@@ -25,7 +25,7 @@ const Provider = ({ provider }) => {
 
   return (
     <div
-      className="bg-white rounded-lg shadow-md lg:w-full sm:w-full pb-2"
+      className="bg-white rounded-lg shadow-md lg:w-full sm:w-full pb-2 w-full"
       onClick={handleRatingsClick}
     >
       <div className="w-full flex flex-col items-center justify-center bg-gray-200 rounded-t-lg pb-2">

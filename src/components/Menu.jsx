@@ -66,7 +66,6 @@ function Menu({ provider }) {
             <li
               className="px-4 py-2 hover:bg-gray-200 cursor-pointer flex items-center"
               onClick={() => {
-                // setIsProfileOpen(true);
                 setIsMenuOpen(false);
                 openDrawer("profile", provider);
               }}
@@ -84,7 +83,6 @@ function Menu({ provider }) {
             <li
               className="px-4 py-2 hover:bg-gray-200 cursor-pointer flex items-center"
               onClick={() => {
-                setIsLogoutOpen(true);
                 setIsMenuOpen(false);
                 handleSignOut();
               }}

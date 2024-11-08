@@ -7,7 +7,7 @@ const Providers = () => {
   const providers = useSelector((state) => state.provider.providers);
 
   return (
-    <div className="grid grid-cols-2 gap-4 m-2">
+    <div className="grid grid-cols-2 gap-6 m-2 w-full">
       {providers.length == 0 ? (
         <div>
           <h2 className="text-center text-xl font-bold items-center justify-center">
@@ -16,7 +16,7 @@ const Providers = () => {
         </div>
       ) : (
         providers?.map((provider, i) => (
-          <div key={i} className="md:w-full">
+          <div key={i} className="md:w-full w-full">
             <ProviderCard provider={provider} />
           </div>
         ))
